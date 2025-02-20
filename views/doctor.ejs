@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="<%= lang %>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= t('doctor.profile') %> - Doktorum nerede - Avusturya</title>
+    <link href="/css/output.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen p-6">
+        <nav class="bg-white shadow-md p-4 mb-6 rounded-lg">
+            <div class="flex justify-between items-center">
+                <a href="/" class="text-blue-600 hover:text-blue-900">← <%= t('nav.backToSearch') %></a>
+                <div class="flex space-x-2">
+                    <a href="?lang=de" class="<%= lang === 'de' ? 'text-indigo-600 font-bold' : 'text-gray-500' %>">DE</a>
+                    <span class="text-gray-300">|</span>
+                    <a href="?lang=tr" class="<%= lang === 'tr' ? 'text-indigo-600 font-bold' : 'text-gray-500' %>">TR</a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-3xl mx-auto">
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <!-- Kopfbereich mit Foto und Namen -->
+                <div class="p-6 bg-gray-50 border-b border-gray-200">
+                    <div class="flex items-center space-x-6">
+                        <% if (doctor.photo) { %>
+                            <img src="/uploads/<%= doctor.photo %>" alt="Arztfoto" class="w-[200px] h-[200px] object-cover rounded-full mx-auto">
+                        <% } else { %>
+                            <div class="w-[200px] h-[200px] bg-gray-200 flex items-center justify-center rounded-full mx-auto">
+                                <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                            </div>
+                        <% } %>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">
+                                <%= doctor.title %> <%= doctor.academicTitle %> <%= doctor.firstName %> <%= doctor.lastName %>
+                            </h1>
+                            <div class="mt-2 text-lg text-gray-600">
+                                <% if (doctor.specialties && doctor.specialties.length > 0) { %>
+                                    <div><%= t('specialties.' + (doctor.title === 'Frau' ? 'female' : 'male') + '.' + doctor.specialties[0]) || doctor.specialties[0] %></div>
+                                    <% if (doctor.specialties[1]) { %>
+                                        <div class="mt-1"><%= t('specialties.' + (doctor.title === 'Frau' ? 'female' : 'male') + '.' + doctor.specialties[1]) || doctor.specialties[1] %></div>
+                                    <% } %>
+                                <% } else if (doctor.originalSpecialty) { %>
+                                    <%= doctor.title === 'Frau' ? 'Fachärztin für' : 'Facharzt für' %> <%= doctor.originalSpecialty.replace('Facharzt für ', '').replace('Fachärztin für ', '') %>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kontaktinformationen -->
+                <div class="p-6 space-y-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 mb-2"><%= t('doctor.contact') %></h2>
+                        <div class="space-y-2">
+                            <p class="flex items-center">
+                                <%= t('doctor.address') %>: <%= doctor.address %>
+                            </p>
+                            <p class="flex items-center">
+                                <%= t('doctor.phone') %>: <%= doctor.phone %>
+                            </p>
+                            <% if (doctor.showEmail) { %>
+                                <p class="flex items-center">
+                                    <%= t('doctor.email') %>: <%= doctor.email %>
+                                </p>
+                            <% } %>
+                            <% if (doctor.website) { %>
+                                <p class="flex items-center">
+                                    <%= t('doctor.website') %>: 
+                                    <a href="<%= doctor.website %>" target="_blank" class="text-blue-600 hover:text-blue-800 ml-1">
+                                        <%= doctor.website %>
+                                    </a>
+                                </p>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <% if (doctor.insurance && Object.keys(doctor.insurance).length > 0) { %>
+                        <div class="mt-6">
+                            <h2 class="text-lg font-semibold text-gray-900 mb-2"><%= t('doctor.insurance') %></h2>
+                            <div class="space-y-1">
+                                <% if (doctor.insurance.noContract) { %>
+                                    <p><%= t('doctor.privateOnly') %></p>
+                                <% } else { %>
+                                    <% if (doctor.insurance.oegk) { %><p>• ÖGK</p><% } %>
+                                    <% if (doctor.insurance.svs) { %><p>• SVS</p><% } %>
+                                    <% if (doctor.insurance.bvaeb) { %><p>• BVAEB</p><% } %>
+                                    <% if (doctor.insurance.kfa) { %><p>• KFA</p><% } %>
+                                <% } %>
+                            </div>
+                        </div>
+                    <% } %>
+
+                    <% if (doctor.additionalInfo) { %>
+                        <div class="mt-6">
+                            <h2 class="text-lg font-semibold text-gray-900 mb-2"><%= t('doctor.additionalInfo') %></h2>
+                            <p class="text-gray-600"><%= doctor.additionalInfo %></p>
+                        </div>
+                    <% } %>
+
+                    <% if (doctor.galleryPhotos && doctor.galleryPhotos.length > 0) { %>
+                        <div class="mt-6">
+                            <h2 class="text-lg font-semibold text-gray-900 mb-2">Bildergalerie - Ordination</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <% doctor.galleryPhotos.forEach(photo => { %>
+                                    <div class="relative">
+                                        <img src="/uploads/<%= photo %>" 
+                                             alt="Ordinationsfoto" 
+                                             class="w-full h-auto rounded-lg shadow-md"
+                                             style="aspect-ratio: 4/3; object-fit: cover;">
+                                    </div>
+                                <% }); %>
+                            </div>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
