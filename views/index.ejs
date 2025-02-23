@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,163 +8,194 @@
 </head>
 <body class="bg-white">
     <!-- Header -->
-    <header class="bg-white">
+    <header class="bg-white py-6 border-b border-gray-200">
         <nav class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="flex h-16 items-center justify-between">
-                <div class="flex lg:flex-1">
-                    <a href="/" class="-m-1.5 p-1.5 text-2xl font-bold text-indigo-600">
-                        Doktorum nerede
+            <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold text-indigo-600">
+                        <%= lang === 'tr' ? 'Doktorum nerede?' : 'Doktorum nerede' %>
                     </a>
                 </div>
-                <div class="flex gap-4 items-center">
-                    <div class="flex space-x-2 mr-4">
-                        <a href="?lang=de" class="<%= lang === 'de' ? 'text-indigo-600 font-bold' : 'text-gray-500' %>">DE</a>
+                <div class="flex items-center space-x-12">
+                    <div class="flex gap-4">
+                        <a href="?lang=de" class="<%= lang === 'de' ? 'text-indigo-600 font-bold' : 'text-gray-500' %> hover:text-gray-900">DE</a>
                         <span class="text-gray-300">|</span>
-                        <a href="?lang=tr" class="<%= lang === 'tr' ? 'text-indigo-600 font-bold' : 'text-gray-500' %>">TR</a>
+                        <a href="?lang=tr" class="<%= lang === 'tr' ? 'text-indigo-600 font-bold' : 'text-gray-500' %> hover:text-gray-900">TR</a>
                     </div>
-                    <a href="/login" class="text-sm font-semibold leading-6 text-gray-900"><%= t('nav.login') %></a>
-                    <a href="/register" class="text-sm font-semibold leading-6 text-indigo-600"><%= t('nav.register') %> →</a>
+                    <a href="/login" class="text-gray-600 hover:text-gray-900 px-4"><%= lang === 'tr' ? 'Giriş' : 'Login' %></a>
+                    <a href="/register" class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700">
+                        <%= lang === 'tr' ? 'Kayıt Ol' : 'Registrieren' %>
+                    </a>
                 </div>
             </div>
         </nav>
     </header>
 
     <!-- Hero Section -->
-    <div class="relative isolate overflow-hidden bg-white">
-        <div class="mx-auto max-w-7xl px-6 pb-24 pt-10 sm:pb-32 lg:flex lg:px-8 lg:py-40">
-            <div class="mx-auto max-w-2xl lg:mx-0 lg:max-w-xl lg:flex-shrink-0 lg:pt-8">
-                <h1 class="mt-10 text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
-                    <%= t('hero.title') %>
+    <div class="relative isolate">
+        <div class="mx-auto max-w-7xl px-6 py-32 sm:py-40 lg:px-8">
+            <div class="text-center space-y-12 mt-16">
+                <h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+                    <% if (lang === 'tr') { %>
+                        Türkçe konuşan doktorları
+                        <span class="text-indigo-600 relative">
+                            kolayca bulun
+                            <svg class="absolute -bottom-2 w-full" viewBox="0 0 300 20" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 15C50 -5 200 -5 299 15" stroke="#818cf8" stroke-width="4" fill="none"/>
+                            </svg>
+                        </span>
+                    <% } else { %>
+                        Türkischsprachige Ärzte
+                        <span class="text-indigo-600 relative">
+                            einfach finden
+                            <svg class="absolute -bottom-2 w-full" viewBox="0 0 300 20" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 15C50 -5 200 -5 299 15" stroke="#818cf8" stroke-width="4" fill="none"/>
+                            </svg>
+                        </span>
+                    <% } %>
                 </h1>
-                <p class="mt-6 text-lg leading-8 text-gray-600">
-                    <%= t('hero.subtitle') %>
-                </p>
-            </div>
-            <div class="mx-auto mt-16 flex max-w-2xl sm:mt-24 lg:ml-10 lg:mr-0 lg:mt-0 lg:max-w-none lg:flex-none xl:ml-32">
-                <div class="max-w-3xl flex-none sm:max-w-5xl lg:max-w-none">
-                    <img src="/images/hero-image.jpg" alt="Arztpraxis" class="w-[76rem] rounded-md bg-white/5 shadow-2xl ring-1 ring-white/10">
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Einleitung -->
-    <div class="mx-auto max-w-7xl px-6 lg:px-8 py-12">
-        <div class="space-y-8">
-            <div class="prose prose-lg">
-                <h2 class="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl mb-4"><%= t('intro.title') %></h2>
-                <p class="text-lg leading-8 text-gray-600">
-                    <%= t('intro.text') %>
+                <p class="mt-16 text-xl leading-8 text-gray-600 max-w-2xl mx-auto">
+                    <%= t('hero.subtitle').replace('Ärzt:innen', 'Ärzt:innen<br>') %>
                 </p>
             </div>
         </div>
     </div>
 
-    <!-- Suchformular -->
-    <div class="mx-auto max-w-7xl px-6 lg:px-8 py-12">
-        <div class="bg-white rounded-xl ring-1 ring-gray-200 p-8">
-            <form action="/" method="GET" class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <div class="space-y-3">
-                        <label for="name" class="block text-sm font-medium leading-6 text-gray-900"><%= t('search.name') %></label>
-                        <input type="text" id="name" name="name" 
-                               class="block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
-                    </div>
-                    <div class="space-y-3">
-                        <label for="specialty" class="block text-sm font-medium leading-6 text-gray-900"><%= t('search.specialty') %></label>
-                        <select id="specialty" name="specialty" 
-                                class="block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
-                            <option value=""><%= t('search.all') %></option>
-                            <% Object.entries(t('specialties.' + (lang === 'tr' ? 'male' : 'male'))).forEach(([key, value]) => { %>
-                                <option value="<%= key %>"><%= value %></option>
-                            <% }); %>
-                        </select>
-                    </div>
-                    <div class="space-y-3">
-                        <label for="zipCode" class="block text-sm font-medium leading-6 text-gray-900"><%= t('search.zipCode') %></label>
-                        <select id="zipCode" name="zipCode" 
-                                class="block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
-                            <option value=""><%= t('search.all') %></option>
-                            <% zipCodes.forEach(zipCode => { %>
-                                <option value="<%= zipCode %>"><%= zipCode %></option>
-                            <% }); %>
-                        </select>
-                    </div>
-                    <div class="space-y-3">
-                        <label for="city" class="block text-sm font-medium leading-6 text-gray-900"><%= t('search.city') %></label>
-                        <select id="city" name="city" 
-                                class="block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
-                            <option value=""><%= t('search.all') %></option>
-                            <% cities.forEach(city => { %>
-                                <option value="<%= city %>"><%= city %></option>
-                            <% }); %>
-                        </select>
-                    </div>
-                </div>
-                <div class="flex justify-end">
-                    <button type="submit" class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-                        <%= t('search.button') %>
-                    </button>
-                </div>
-            </form>
-        </div>
+    <!-- Search Section -->
+    <div id="search" class="bg-gray-50 py-32 sm:py-40">
+        <div class="mx-auto max-w-7xl px-6 lg:px-8">
+            <div class="mx-auto max-w-2xl lg:text-center space-y-8 mt-16" style="padding-top: 60px;">
+                <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl text-center">
+                    <%= lang === 'tr' ? 'Size uygun doktoru bulun' : 'Finden Sie den richtigen Arzt' %>
+                </h2>
+                <p class="mt-8 text-xl leading-8 text-gray-600 text-center">
+                    <%= lang === 'tr' ? 'Uzmanlık alanı, isim veya konum ile arama yapın' : 'Suchen Sie nach Fachgebiet, Name oder Standort' %>
+                </p>
+            </div>
 
-        <!-- Ergebnisliste -->
-        <div class="mt-8 flow-root">
-            <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-                <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-                    <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-                        <table class="min-w-full divide-y divide-gray-300">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Anrede</th>
-                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Name</th>
-                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Fachgebiet</th>
-                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Details</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200 bg-white">
-                                <% if (doctors && doctors.length > 0) { %>
-                                    <% doctors.forEach(doctor => { %>
-                                        <tr>
-                                            <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                                                <%= doctor.title || '(Nicht angegeben)' %>
-                                            </td>
-                                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                <%= doctor.academicTitle ? doctor.academicTitle + ' ' : '' %>
-                                                <%= doctor.firstName || '' %> <%= doctor.lastName || '' %>
-                                            </td>
-                                            <td class="px-3 py-4 text-sm text-gray-500">
-                                                <% if (doctor.specialties && doctor.specialties.length > 0) { %>
-                                                    <%= doctor.specialties[0] %>
-                                                    <% if (doctor.specialties[1]) { %>
-                                                        <br><%= doctor.specialties[1] %>
-                                                    <% } %>
-                                                <% } else { %>
-                                                    <%= doctor.originalSpecialty %>
-                                                <% } %>
-                                            </td>
-                                            <td class="whitespace-nowrap px-3 py-4 text-sm">
-                                                <a href="/doctor/<%= formatNameForUrl(doctor.firstName || '', doctor.lastName || '') %>" 
-                                                   class="text-blue-600 hover:text-blue-900 font-medium">
-                                                    <%= t('search.toProfile') %> →
-                                                </a>
-                                            </td>
-                                        </tr>
+            <!-- Suchformular -->
+            <div class="mx-auto max-w-7xl px-6 lg:px-8 py-12">
+                <div class="bg-white rounded-xl ring-1 ring-gray-200 p-8">
+                    <form action="/" method="GET" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                            <div class="space-y-3">
+                                <label for="name" class="block text-sm font-medium leading-6 text-gray-900"><%= t('search.name') %></label>
+                                <input type="text" id="name" name="name" 
+                                       class="block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                            </div>
+                            <div class="space-y-3">
+                                <label for="specialty" class="block text-sm font-medium leading-6 text-gray-900"><%= t('search.specialty') %></label>
+                                <select id="specialty" name="specialty" 
+                                        class="block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                    <option value=""><%= t('search.all') %></option>
+                                    <% Object.entries(t('specialties.' + (lang === 'tr' ? 'male' : 'male'))).forEach(([key, value]) => { %>
+                                        <option value="<%= key %>"><%= value %></option>
                                     <% }); %>
-                                <% } else { %>
-                                    <tr>
-                                        <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
-                                            Keine Ärzte gefunden
-                                        </td>
-                                    </tr>
-                                <% } %>
-                            </tbody>
-                        </table>
+                                </select>
+                            </div>
+                            <div class="space-y-3">
+                                <label for="zipCode" class="block text-sm font-medium leading-6 text-gray-900"><%= t('search.zipCode') %></label>
+                                <select id="zipCode" name="zipCode" 
+                                        class="block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                    <option value=""><%= t('search.all') %></option>
+                                    <% zipCodes.forEach(zipCode => { %>
+                                        <option value="<%= zipCode %>"><%= zipCode %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="space-y-3">
+                                <label for="city" class="block text-sm font-medium leading-6 text-gray-900"><%= t('search.city') %></label>
+                                <select id="city" name="city" 
+                                        class="block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                    <option value=""><%= t('search.all') %></option>
+                                    <% cities.forEach(city => { %>
+                                        <option value="<%= city %>"><%= city %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit" class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                                <%= t('search.button') %>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Ergebnisliste -->
+                <div class="mt-8 flow-root">
+                    <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                        <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+                            <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+                                <table class="min-w-full divide-y divide-gray-300">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"><%= t('table.title') %></th>
+                                            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"><%= t('table.name') %></th>
+                                            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"><%= t('table.specialty') %></th>
+                                            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"><%= t('table.details') %></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 bg-white">
+                                        <% if (doctors && doctors.length > 0) { %>
+                                            <% doctors.forEach(doctor => { %>
+                                                <tr>
+                                                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                                                        <%= doctor.title || '(Nicht angegeben)' %>
+                                                    </td>
+                                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                        <%= doctor.academicTitle ? doctor.academicTitle + ' ' : '' %>
+                                                        <%= doctor.firstName || '' %> <%= doctor.lastName || '' %>
+                                                    </td>
+                                                    <td class="px-3 py-4 text-sm text-gray-500">
+                                                        <% if (doctor.specialties && doctor.specialties.length > 0) { %>
+                                                            <%= t('specialties.' + (doctor.title === 'Frau' ? 'female.' : 'male.') + doctor.specialties[0].split('.').pop()) %>
+                                                            <% if (doctor.specialties[1]) { %>
+                                                                <br><%= t('specialties.' + (doctor.title === 'Frau' ? 'female.' : 'male.') + doctor.specialties[1].split('.').pop()) %>
+                                                            <% } %>
+                                                        <% } else { %>
+                                                            <%= doctor.originalSpecialty %>
+                                                        <% } %>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <a href="/doctor/<%= formatNameForUrl(doctor.firstName || '', doctor.lastName || '') %>" 
+                                                           class="text-blue-600 hover:text-blue-900 font-medium">
+                                                            <%= t('search.toProfile') %> →
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            <% }); %>
+                                        <% } else { %>
+                                            <tr>
+                                                <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
+                                                    <%= t('search.noResults') %>
+                                                </td>
+                                            </tr>
+                                        <% } %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="bg-indigo-600 mt-16">
+        <div class="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
+            <div class="flex justify-center space-x-6 md:order-2">
+                <a href="/impressum" class="text-white hover:text-gray-100">Impressum</a>
+                <span class="text-white">|</span>
+                <a href="/datenschutz" class="text-white hover:text-gray-100">Datenschutz</a>
+            </div>
+            <div class="mt-8 md:order-1 md:mt-0">
+                <p class="text-center text-sm leading-5 text-white">
+                    &copy; <%= new Date().getFullYear() %> Doktorum nerede. Alle Rechte vorbehalten.
+                </p>
+            </div>
+        </div>
+    </footer>
 </body>
 </html> 

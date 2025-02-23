@@ -1,7 +1,8 @@
 {
     "nav": {
         "login": "Login",
-        "register": "Registrieren"
+        "register": "Registrieren",
+        "backToSearch": "Zurück zur Suche"
     },
     "hero": {
         "title": "Finden Sie den richtigen Arzt für Sie",
@@ -37,6 +38,7 @@
             "Allgemeinmedizin": "Allgemeinmedizin",
             "Anästhesiologie": "Anästhesiologie",
             "Arbeitsmedizin": "Arbeitsmedizin",
+            "Augenheilkunde": "Augenheilkunde",
             "Chirurgie": "Chirurgie",
             "Dermatologie": "Dermatologie und Venerologie",
             "Endokrinologie": "Endokrinologie, Diabetologie und Ernährungsmedizin",
@@ -47,8 +49,9 @@
             "Hämatologie": "Hämatologie und Onkologie",
             "Infektiologie": "Infektiologie",
             "InnereMedizin": "Innere Medizin",
-            "Kinderheilkunde": "Kinder- und Jugendheilkunde",
             "Kardiologie": "Kardiologie",
+            "KieferChirurgie": "Mund-, Kiefer- und Gesichtschirurgie",
+            "Kinderheilkunde": "Kinder- und Jugendheilkunde",
             "Labormedizin": "Laboratoriumsmedizin",
             "Nephrologie": "Nephrologie",
             "Neurologie": "Neurologie",
@@ -65,13 +68,13 @@
             "Strahlentherapie": "Strahlentherapie",
             "Urologie": "Urologie",
             "Viszeralchirurgie": "Viszeralchirurgie",
-            "Zahnmedizin": "Zahnmedizin",
-            "KieferChirurgie": "Mund-, Kiefer- und Gesichtschirurgie"
+            "Zahnmedizin": "Zahnmedizin"
         },
         "female": {
             "Allgemeinmedizin": "Allgemeinmedizin",
             "Anästhesiologie": "Anästhesiologie",
             "Arbeitsmedizin": "Arbeitsmedizin",
+            "Augenheilkunde": "Augenheilkunde",
             "Chirurgie": "Chirurgie",
             "Dermatologie": "Dermatologie und Venerologie",
             "Endokrinologie": "Endokrinologie, Diabetologie und Ernährungsmedizin",
@@ -82,8 +85,9 @@
             "Hämatologie": "Hämatologie und Onkologie",
             "Infektiologie": "Infektiologie",
             "InnereMedizin": "Innere Medizin",
-            "Kinderheilkunde": "Kinder- und Jugendheilkunde",
             "Kardiologie": "Kardiologie",
+            "KieferChirurgie": "Mund-, Kiefer- und Gesichtschirurgie",
+            "Kinderheilkunde": "Kinder- und Jugendheilkunde",
             "Labormedizin": "Laboratoriumsmedizin",
             "Nephrologie": "Nephrologie",
             "Neurologie": "Neurologie",
@@ -100,8 +104,13 @@
             "Strahlentherapie": "Strahlentherapie",
             "Urologie": "Urologie",
             "Viszeralchirurgie": "Viszeralchirurgie",
-            "Zahnmedizin": "Zahnmedizin",
-            "KieferChirurgie": "Mund-, Kiefer- und Gesichtschirurgie"
+            "Zahnmedizin": "Zahnmedizin"
         }
+    },
+    "table": {
+        "title": "Anrede",
+        "name": "Name",
+        "specialty": "Fachgebiet",
+        "details": "Details"
     }
 } 

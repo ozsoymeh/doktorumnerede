@@ -13,7 +13,7 @@
                 Doktorum nerede
             </a>
             <h2 class="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
-                Registrieren Sie sich als Arzt
+                Als Arzt registrieren
             </h2>
         </div>
 
@@ -57,7 +57,7 @@
                     </div>
 
                     <div>
-                        <label for="confirmPassword" class="block text-sm font-medium leading-6 text-gray-900">Passwort bestätigen *</label>
+                        <label for="confirmPassword" class="block text-sm font-medium leading-6 text-gray-900">Passwort wiederholen *</label>
                         <div class="mt-2">
                             <input type="password" id="confirmPassword" name="confirmPassword" required
                                 class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
@@ -101,14 +101,11 @@
                     </div>
 
                     <div>
-                        <label for="mainSpecialty" class="block text-sm font-medium leading-6 text-gray-900"><%= t('search.specialty') %> *</label>
+                        <label for="mainSpecialty" class="block text-sm font-medium leading-6 text-gray-900">Fachgebiet *</label>
                         <div class="mt-2">
                             <select id="mainSpecialty" name="mainSpecialty" required
                                 class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
-                                <option value=""><%= t('search.all') %></option>
-                                <% Object.entries(t('specialties.male')).forEach(([key, value]) => { %>
-                                    <option value="<%= key %>"><%= value %></option>
-                                <% }); %>
+                                <option value="">Bitte wählen</option>
                             </select>
                         </div>
                     </div>
@@ -138,7 +135,7 @@
                     </div>
 
                     <div>
-                        <label for="phone" class="block text-sm font-medium leading-6 text-gray-900">Telefonnummer *</label>
+                        <label for="phone" class="block text-sm font-medium leading-6 text-gray-900">Telefon *</label>
                         <div class="mt-2">
                             <input type="tel" id="phone" name="phone" required
                                 class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
@@ -160,7 +157,7 @@
                     <div>
                         <button type="submit" 
                             class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-                            Registrieren →
+                            Registrieren
                         </button>
                     </div>
 
@@ -177,15 +174,13 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const titleSelect = document.getElementById('title');
             const mainSpecialtySelect = document.getElementById('mainSpecialty');
-
-            titleSelect.addEventListener('change', function() {
-                mainSpecialtySelect.innerHTML = '<option value="">Bitte wählen</option>';
-                <% specialties.male.forEach(specialty => { %>
-                    mainSpecialtySelect.innerHTML += `<option value="<%= specialty %>"><%= specialty %></option>`;
-                <% }); %>
-            });
+            
+            // Fachgebiete initial füllen
+            mainSpecialtySelect.innerHTML = '<option value="">Bitte wählen</option>';
+            <% Object.entries(t('specialties.male')).forEach(([key, value]) => { %>
+                mainSpecialtySelect.innerHTML += `<option value="<%= key %>"><%= value %></option>`;
+            <% }); %>
         });
     </script>
 </body>

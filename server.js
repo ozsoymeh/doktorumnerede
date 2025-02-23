@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const fs = require('fs');
 const multer = require('multer');
 const bcrypt = require('bcrypt');
@@ -10,7 +10,7 @@ const sharp = require('sharp');
 const fsPromises = require('fs').promises;
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 
 // Lade Übersetzungen
 const translations = {
@@ -31,14 +31,14 @@ const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         if (file.fieldname === 'excel') {
             cb(null, 'data/');
-        } else if (file.fieldname === 'photo' || file.fieldname === 'galleryPhoto') {
+        } else if (file.fieldname === 'photo' || file.fieldname === 'galleryPhotos') {
             cb(null, 'public/uploads/temp/');
         }
     },
     filename: function (req, file, cb) {
         if (file.fieldname === 'excel') {
             cb(null, 'doctors.xlsx');
-        } else if (file.fieldname === 'photo' || file.fieldname === 'galleryPhoto') {
+        } else if (file.fieldname === 'photo' || file.fieldname === 'galleryPhotos') {
             const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
             cb(null, uniqueSuffix + path.extname(file.originalname));
         }
@@ -46,16 +46,16 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-    if (file.fieldname === 'photo' || file.fieldname === 'galleryPhoto') {
+    if (file.fieldname === 'photo' || file.fieldname === 'galleryPhotos') {
         // Überprüfe Dateityp
         if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
             return cb(new Error('Nur JPG, JPEG und PNG Dateien sind erlaubt!'), false);
         }
         
         // Überprüfe Dateigröße
-        const maxSize = file.fieldname === 'galleryPhoto' ? 1024 * 1024 : 2 * 1024 * 1024; // 1MB für Galerie, 2MB für Profilbild
+        const maxSize = 1024 * 1024; // 1MB für alle Bilder
         if (parseInt(req.headers['content-length']) > maxSize) {
-            return cb(new Error(`Die Dateigröße darf maximal ${maxSize / (1024 * 1024)}MB betragen!`), false);
+            return cb(new Error('Die Dateigröße darf maximal 1MB betragen!'), false);
         }
     }
     cb(null, true);
@@ -65,7 +65,7 @@ const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 2 * 1024 * 1024 // 2MB in Bytes
+        fileSize: 1024 * 1024 // 1MB in Bytes
     }
 });
 
@@ -224,33 +224,51 @@ function formatNameForUrl(firstName, lastName) {
 
 async function processExcelFile() {
     const filePath = path.join(__dirname, 'data', 'doctors.xlsx');
-    const workbook = XLSX.readFile(filePath);
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(worksheet);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(filePath);
+    
+    const worksheet = workbook.getWorksheet(1);
+    const data = [];
+    
+    // Die erste Zeile enthält die Überschriften
+    const headers = {};
+    worksheet.getRow(1).eachCell((cell, colNumber) => {
+        headers[colNumber] = cell.value;
+    });
+    
+    // Daten aus den weiteren Zeilen lesen
+    worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return; // Überschriften überspringen
+        
+        const rowData = {};
+        row.eachCell((cell, colNumber) => {
+            rowData[headers[colNumber]] = cell.value;
+        });
+        data.push(rowData);
+    });
 
     const doctors = [];
     for (let row of data) {
         const password = generatePassword();
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        // Angepasste Datenzuordnung
         doctors.push({
-            academicTitle: row.Titel || '',  // Akademischer Titel
-            firstName: row.Name || '',        // Vorname
-            lastName: row.Nachname || '',     // Nachname
-            specialties: [],                  // Leeres Array für Fachgebiete
+            academicTitle: row.Titel || '',
+            firstName: row.Name || '',
+            lastName: row.Nachname || '',
+            specialties: [],
             address: `${row.Ordinationsadresse || ''}, ${row.PLZ || ''} ${row.Stadt || ''}`.trim(),
             phone: row.Telefonnummer?.toString() || '',
             email: row['Emailadresse der Ordination'] || '',
-            showEmail: false,                 // E-Mail standardmäßig versteckt
+            showEmail: false,
             website: row.Webseite || '',
-            title: null,                      // Anrede (Herr/Frau) muss beim ersten Login gesetzt werden
+            title: null,
             password: hashedPassword,
             plainPassword: password,
             photo: '',
             kassenvertrag: row['Vertrag mit SV'] || '',
-            isProfileComplete: false,         // Neues Feld zur Überprüfung, ob das Profil vollständig ist
-            originalSpecialty: row.Fachbereich || '', // Ursprüngliches Fachgebiet zur Referenz
+            isProfileComplete: false,
+            originalSpecialty: row.Fachbereich || '',
             isApproved: false,
             registrationDate: new Date().toISOString()
         });
@@ -322,8 +340,8 @@ app.get('/', (req, res) => {
         cities,
         zipCodes,
         formatNameForUrl,
-        lang: req.query.lang || 'de',
-        t: (key) => res.locals.t(key)
+        lang: req.query.lang || req.session.lang || 'de',
+        t: res.locals.t
     });
 });
 
@@ -395,112 +413,116 @@ app.get('/profile', requireAuth, (req, res) => {
     delete req.session.message;
 });
 
-app.post('/update-profile', requireAuth, async (req, res) => {
-    const doctors = getDoctors();
-    const index = doctors.findIndex(d => d.email === req.session.doctorId);
-    
-    if (index === -1) {
-        req.session.destroy();
-        return res.redirect('/login');
-    }
+app.post('/profile/edit', requireAuth, upload.fields([
+    { name: 'photo', maxCount: 1 },
+    { name: 'galleryPhotos', maxCount: 2 }
+]), async (req, res) => {
+    try {
+        const doctors = getDoctors();
+        const doctorIndex = doctors.findIndex(d => d.email === req.session.doctorId);
+        
+        if (doctorIndex === -1) {
+            return res.redirect('/login');
+        }
 
-    const { 
-        title, 
-        firstName,
-        lastName,
-        academicTitle,
-        mainSpecialty,
-        hasAdditionalSpecialty,
-        additionalSpecialty,
-        street,
-        city,
-        zipCode,
-        address, 
-        phone, 
-        email,
-        showEmail,
-        additionalInfo,
-        newPassword,
-        website,
-        insuranceType,
-        insurance
-    } = req.body;
-    
-    // Validierung der Pflichtfelder
-    const requiredFields = {
-        title: 'Anrede',
-        firstName: 'Vorname',
-        lastName: 'Nachname',
-        mainSpecialty: 'Hauptfachgebiet',
-        street: 'Straße',
-        city: 'Stadt',
-        zipCode: 'PLZ',
-        phone: 'Telefonnummer',
-        email: 'E-Mail-Adresse'
-    };
-
-    for (const [field, label] of Object.entries(requiredFields)) {
-        if (!req.body[field]) {
+        // Überprüfe, ob der Arzt bestätigt ist
+        if (!doctors[doctorIndex].isApproved) {
             req.session.message = {
                 type: 'error',
-                text: `${label} ist ein Pflichtfeld.`
+                text: 'Ihr Profil muss erst von einem Administrator freigegeben werden.'
             };
             return res.redirect('/profile');
         }
-    }
 
-    // Fachgebiete zusammenstellen
-    const specialties = [mainSpecialty];
-    if (hasAdditionalSpecialty === 'yes' && additionalSpecialty) {
-        specialties.push(additionalSpecialty);
-    }
-
-    // Adresse zusammenbauen
-    const fullAddress = `${street}, ${zipCode} ${city}`;
-
-    // Update doctor data
-    const updatedDoctor = {
-        ...doctors[index],
-        title,
-        firstName,
-        lastName,
-        academicTitle: academicTitle || '',
-        specialties,
-        address: fullAddress,
-        street,
-        city,
-        zipCode,
-        phone,
-        email,
-        showEmail: showEmail === 'true',
-        additionalInfo: additionalInfo || '',
-        website: website || '',
-        insurance: insuranceType === 'noContract' 
-            ? { noContract: true }
-            : {
-                noContract: false,
-                oegk: insurance?.oegk === 'true',
-                svs: insurance?.svs === 'true',
-                bvaeb: insurance?.bvaeb === 'true',
-                kfa: insurance?.kfa === 'true'
+        const updatedDoctor = {
+            ...doctors[doctorIndex],
+            ...req.body,
+            insurance: {
+                noContract: req.body.insuranceType === 'noContract',
+                oegk: req.body['insurance[oegk]'] === 'true',
+                svs: req.body['insurance[svs]'] === 'true',
+                bvaeb: req.body['insurance[bvaeb]'] === 'true',
+                kfa: req.body['insurance[kfa]'] === 'true'
             },
-        isProfileComplete: true
-    };
+            insuranceType: req.body.insuranceType || 'hasContract',
+            showEmail: req.body.showEmail === 'true'
+        };
 
-    // Update password if provided
-    if (newPassword) {
-        updatedDoctor.password = await bcrypt.hash(newPassword, 10);
+        // Profilfoto verarbeiten
+        if (req.files.photo && req.files.photo[0]) {
+            const photo = req.files.photo[0];
+            const photoFileName = `profile-${Date.now()}.jpg`;
+            
+            // Altes Foto löschen falls vorhanden
+            if (doctors[doctorIndex].photo) {
+                const oldPhotoPath = path.join(__dirname, 'public', 'uploads', doctors[doctorIndex].photo);
+                try {
+                    await fsPromises.unlink(oldPhotoPath);
+                } catch (error) {
+                    console.error('Fehler beim Löschen des alten Fotos:', error);
+                }
+            }
+
+            await sharp(photo.path)
+                .resize(400, 400, { fit: 'cover' })
+                .jpeg({ quality: 90 })
+                .toFile(path.join(__dirname, 'public', 'uploads', photoFileName));
+            
+            // Temporäre Datei löschen
+            await fsPromises.unlink(photo.path);
+            
+            updatedDoctor.photo = photoFileName;
+        }
+
+        // Galeriefotos verarbeiten
+        if (req.files.galleryPhotos) {
+            const newGalleryPhotos = [];
+            for (const photo of req.files.galleryPhotos) {
+                const photoFileName = `gallery-${Date.now()}-${newGalleryPhotos.length + 1}.jpg`;
+                
+                await sharp(photo.path)
+                    .resize(800, 600, { fit: 'cover' })
+                    .jpeg({ quality: 90 })
+                    .toFile(path.join(__dirname, 'public', 'uploads', photoFileName));
+                
+                // Temporäre Datei löschen
+                await fsPromises.unlink(photo.path);
+                
+                newGalleryPhotos.push(photoFileName);
+            }
+
+            // Alte Fotos löschen
+            if (doctors[doctorIndex].galleryPhotos) {
+                for (const oldPhoto of doctors[doctorIndex].galleryPhotos) {
+                    const oldPhotoPath = path.join(__dirname, 'public', 'uploads', oldPhoto);
+                    try {
+                        await fsPromises.unlink(oldPhotoPath);
+                    } catch (error) {
+                        console.error('Fehler beim Löschen des alten Galeriefotos:', error);
+                    }
+                }
+            }
+
+            updatedDoctor.galleryPhotos = newGalleryPhotos;
+        }
+
+        doctors[doctorIndex] = updatedDoctor;
+        saveDoctors(doctors);
+
+        req.session.message = {
+            type: 'success',
+            text: 'Ihre Änderungen wurden erfolgreich gespeichert.'
+        };
+
+        res.redirect('/profile');
+    } catch (error) {
+        console.error('Fehler beim Speichern der Profiländerungen:', error);
+        req.session.message = {
+            type: 'error',
+            text: 'Beim Speichern der Änderungen ist ein Fehler aufgetreten.'
+        };
+        res.redirect('/profile');
     }
-
-    doctors[index] = updatedDoctor;
-    saveDoctors(doctors);
-    
-    req.session.message = {
-        type: 'success',
-        text: 'Profil wurde erfolgreich aktualisiert'
-    };
-    
-    res.redirect('/profile');
 });
 
 app.post('/upload-photo', requireAuth, upload.single('photo'), async (req, res) => {
@@ -567,7 +589,7 @@ app.post('/upload-photo', requireAuth, upload.single('photo'), async (req, res) 
 });
 
 // Excel Upload Route
-app.post('/upload', upload.single('excel'), async (req, res) => {
+app.post('/upload', requireAdmin, upload.single('excel'), async (req, res) => {
     try {
         const doctors = await processExcelFile();
         res.json({
@@ -758,7 +780,7 @@ app.post('/admin/change-password', requireAdmin, async (req, res) => {
 });
 
 // Neue Routen für Galeriefotos
-app.post('/upload-gallery-photo', requireAuth, upload.single('galleryPhoto'), async (req, res) => {
+app.post('/upload-gallery-photo', requireAuth, upload.single('galleryPhotos'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'Keine Datei hochgeladen' });
@@ -810,7 +832,11 @@ app.post('/delete-gallery-photo', requireAuth, async (req, res) => {
         const doctorIndex = doctors.findIndex(d => d.email === req.session.doctorId);
         
         if (doctorIndex === -1) {
-            return res.status(404).json({ success: false, message: 'Arzt nicht gefunden' });
+            req.session.message = {
+                type: 'error',
+                text: 'Arzt nicht gefunden'
+            };
+            return res.redirect('/profile');
         }
 
         // Foto aus der Galerie entfernen
@@ -820,23 +846,46 @@ app.post('/delete-gallery-photo', requireAuth, async (req, res) => {
                 doctors[doctorIndex].galleryPhotos.splice(photoIndex, 1);
                 
                 // Foto aus dem Dateisystem löschen
-                const photoPath = path.join(uploadsDir, photoName);
+                const photoPath = path.join(__dirname, 'public', 'uploads', photoName);
                 if (fs.existsSync(photoPath)) {
                     await fsPromises.unlink(photoPath);
                 }
                 
                 saveDoctors(doctors);
+                
+                req.session.message = {
+                    type: 'success',
+                    text: 'Foto wurde erfolgreich gelöscht.'
+                };
             }
         }
 
         res.redirect('/profile');
     } catch (error) {
         console.error('Fehler beim Löschen des Galeriefotos:', error);
-        res.status(500).json({ success: false, message: 'Fehler beim Löschen des Fotos' });
+        req.session.message = {
+            type: 'error',
+            text: 'Fehler beim Löschen des Fotos'
+        };
+        res.redirect('/profile');
     }
 });
 
+// Impressum Route
+app.get('/impressum', (req, res) => {
+    res.render('impressum', {
+        title: 'Impressum - Doktorum nerede'
+    });
+});
+
+// Datenschutz Route
+app.get('/datenschutz', (req, res) => {
+    res.render('datenschutz', {
+        title: 'Datenschutz - Doktorum nerede'
+    });
+});
+
 // Server starten
-app.listen(PORT, () => {
-    console.log(`Server läuft auf http://localhost:${PORT}`);
+app.listen(port, () => {
+    console.log(`Server läuft auf http://localhost:${port}`);
 }); 
