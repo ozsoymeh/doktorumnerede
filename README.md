@@ -1,6 +1,6 @@
-# Docfinder Türk
+# Doktorum Nerede
 
-Eine Webanwendung zur Suche nach türkischen Ärzten in Wien.
+Eine Webanwendung zur Suche nach türkischsprachigen Ärzten in Wien und ganz Österreich.
 
 ## Installation
 
