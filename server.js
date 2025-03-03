@@ -22,9 +22,13 @@ const translations = {
 const dataDir = path.join(__dirname, 'data');
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
 const tempUploadsDir = path.join(__dirname, 'public', 'uploads', 'temp');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
-if (!fs.existsSync(tempUploadsDir)) fs.mkdirSync(tempUploadsDir, { recursive: true });
+try {
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+    if (!fs.existsSync(tempUploadsDir)) fs.mkdirSync(tempUploadsDir, { recursive: true });
+} catch (error) {
+    console.error('Fehler beim Erstellen der Verzeichnisse:', error);
+}
 
 // Multer Konfiguration für Datei-Uploads
 const storage = multer.diskStorage({
@@ -190,7 +194,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 // Auth Middleware
 function requireAuth(req, res, next) {
-    if (req.session.doctorId) {
+    if (req.session.userId || req.session.doctorId) {
         next();
     } else {
         res.redirect('/login');
@@ -284,17 +288,28 @@ async function processExcelFile() {
 
 function getDoctors() {
     const doctorsPath = path.join(__dirname, 'data', 'doctors.json');
-    if (fs.existsSync(doctorsPath)) {
+    try {
+        if (!fs.existsSync(doctorsPath)) {
+            return [];
+        }
         return JSON.parse(fs.readFileSync(doctorsPath, 'utf8'));
+    } catch (error) {
+        console.error('Fehler beim Laden der Ärztedaten:', error);
+        return [];
     }
-    return [];
 }
 
 function saveDoctors(doctors) {
-    fs.writeFileSync(
-        path.join(__dirname, 'data', 'doctors.json'),
-        JSON.stringify(doctors, null, 2)
-    );
+    const doctorsPath = path.join(__dirname, 'data', 'doctors.json');
+    try {
+        fs.writeFileSync(
+            doctorsPath,
+            JSON.stringify(doctors, null, 2),
+            'utf8'
+        );
+    } catch (error) {
+        console.error('Fehler beim Speichern der Ärztedaten:', error);
+    }
 }
 
 // Routes
@@ -368,7 +383,7 @@ app.post('/login', async (req, res) => {
     const doctor = doctors.find(d => d.email === email);
 
     if (doctor && await bcrypt.compare(password, doctor.password)) {
-        req.session.doctorId = doctor.email;
+        req.session.userId = doctor.email;
         req.session.isAdmin = doctor.isAdmin || false;  // Speichere Admin-Status in der Session
         
         // Wenn das Profil nicht vollständig ist (keine Anrede gesetzt), zur Profilseite weiterleiten
@@ -398,7 +413,7 @@ app.post('/logout', (req, res) => {
 // Profil Routes
 app.get('/profile', requireAuth, (req, res) => {
     const doctors = getDoctors();
-    const doctor = doctors.find(d => d.email === req.session.doctorId);
+    const doctor = doctors.find(d => d.email === req.session.userId || req.session.doctorId);
     
     if (!doctor) {
         req.session.destroy();
@@ -419,7 +434,7 @@ app.post('/profile/edit', requireAuth, upload.fields([
 ]), async (req, res) => {
     try {
         const doctors = getDoctors();
-        const doctorIndex = doctors.findIndex(d => d.email === req.session.doctorId);
+        const doctorIndex = doctors.findIndex(d => d.email === req.session.userId || req.session.doctorId);
         
         if (doctorIndex === -1) {
             return res.redirect('/login');
@@ -438,11 +453,11 @@ app.post('/profile/edit', requireAuth, upload.fields([
             ...doctors[doctorIndex],
             ...req.body,
             insurance: {
-                noContract: req.body.insuranceType === 'noContract',
-                oegk: req.body['insurance[oegk]'] === 'true',
-                svs: req.body['insurance[svs]'] === 'true',
-                bvaeb: req.body['insurance[bvaeb]'] === 'true',
-                kfa: req.body['insurance[kfa]'] === 'true'
+                noContract: req.body.noContract === "true",
+                oegk: req.body.insurance_oegk === "true" || req.body["insurance[oegk]"] === "true",
+                svs: req.body.insurance_svs === "true" || req.body["insurance[svs]"] === "true",
+                bvaeb: req.body.insurance_bvaeb === "true" || req.body["insurance[bvaeb]"] === "true",
+                kfa: req.body.insurance_kfa === "true" || req.body["insurance[kfa]"] === "true"
             },
             insuranceType: req.body.insuranceType || 'hasContract',
             showEmail: req.body.showEmail === 'true'
@@ -528,63 +543,53 @@ app.post('/profile/edit', requireAuth, upload.fields([
 app.post('/upload-photo', requireAuth, upload.single('photo'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({
-                success: false,
-                message: 'Bitte wählen Sie ein Foto aus'
-            });
+            return res.status(400).json({ success: false, message: 'Bitte wählen Sie ein Bild zum Hochladen aus.' });
         }
 
+        const email = req.session.userId;
         const doctors = getDoctors();
-        const index = doctors.findIndex(d => d.email === req.session.doctorId);
-        
+        const index = doctors.findIndex(d => d.email === email);
+
         if (index === -1) {
-            return res.status(404).json({
-                success: false,
-                message: 'Arzt nicht gefunden'
-            });
+            // Löschen der hochgeladenen Datei, wenn der Arzt nicht gefunden wird
+            if (req.file.path) {
+                fs.unlinkSync(req.file.path);
+            }
+            return res.status(404).json({ success: false, message: 'Arzt nicht gefunden' });
         }
 
-        // Altes Foto löschen, falls vorhanden
-        if (doctors[index].photo) {
+        // Bildverarbeitung mit Sharp
+        const photoFileName = `profile_${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`;
+        
+        // Altes Foto löschen falls vorhanden
+        if (doctors[index].photo && doctors[index].photo !== '') {
             const oldPhotoPath = path.join(__dirname, 'public', 'uploads', doctors[index].photo);
-            try {
-                await fsPromises.unlink(oldPhotoPath);
-            } catch (error) {
-                console.error('Fehler beim Löschen des alten Fotos:', error);
+            if (fs.existsSync(oldPhotoPath)) {
+                fs.unlinkSync(oldPhotoPath);
             }
         }
 
-        // Verarbeite das neue Foto
-        const tempPath = req.file.path;
-        const targetFilename = Date.now() + '-' + path.basename(tempPath);
-        const targetPath = path.join(uploadsDir, targetFilename);
+        // Bild verarbeiten und speichern
+        await sharp(req.file.path)
+            .resize({ width: 500, height: 500, fit: 'cover' })
+            .jpeg({ quality: 90 })
+            .toFile(path.join(__dirname, 'public', 'uploads', photoFileName));
 
-        // Verarbeite das Bild mit Sharp
-        await sharp(tempPath)
-            .resize(200, 200, {
-                fit: 'cover',
-                position: 'center'
-            })
-            .toFile(targetPath);
+        // Temp-Datei löschen
+        fs.unlinkSync(req.file.path);
 
-        // Lösche das temporäre Bild
-        await fsPromises.unlink(tempPath);
-
-        // Aktualisiere den Dateinamen in der Datenbank
-        doctors[index].photo = targetFilename;
+        // Datenbank aktualisieren
+        doctors[index].photo = photoFileName;
         saveDoctors(doctors);
 
-        res.json({
-            success: true,
-            message: 'Foto wurde erfolgreich hochgeladen',
-            photo: targetFilename
-        });
+        res.json({ success: true, photoUrl: `/uploads/${photoFileName}` });
     } catch (error) {
         console.error('Fehler beim Hochladen des Fotos:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Fehler beim Hochladen des Fotos: ' + error.message
-        });
+        // Versuchen die temporäre Datei zu löschen im Fehlerfall
+        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ success: false, message: 'Fehler beim Hochladen des Fotos' });
     }
 });
 
@@ -612,65 +617,73 @@ app.get('/register', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-    const { 
-        email, 
-        password, 
-        confirmPassword, 
-        title, 
-        academicTitle,
-        firstName, 
-        lastName,
-        mainSpecialty,
-        street,
-        city,
-        zipCode,
-        phone,
-        additionalInfo
-    } = req.body;
-    
-    if (password !== confirmPassword) {
-        return res.render('register', { error: 'Die Passwörter stimmen nicht überein', specialties: specialties });
+    try {
+        const { email, password, confirmPassword, title, academicTitle, firstName, lastName, mainSpecialty } = req.body;
+        
+        // Validierung
+        if (password !== confirmPassword) {
+            return res.render('register', { error: 'Die Passwörter stimmen nicht überein', t: res.locals.t });
+        }
+        
+        const doctors = getDoctors();
+        
+        // Überprüfen, ob E-Mail bereits existiert
+        if (doctors.some(doc => doc.email === email)) {
+            return res.render('register', { error: 'E-Mail wird bereits verwendet', t: res.locals.t });
+        }
+        
+        // Adressformatierung
+        const street = req.body.street || '';
+        const zipCode = req.body.zipCode || '';
+        const city = req.body.city || '';
+        const address = `${street}, ${zipCode} ${city}`.trim();
+        
+        // Neuen Arzt erstellen
+        const newDoctor = {
+            email,
+            password: await bcrypt.hash(password, 10),
+            title,
+            academicTitle,
+            firstName,
+            lastName,
+            specialties: mainSpecialty ? [mainSpecialty] : [],
+            originalSpecialty: null, // Standardwert für originalSpecialty
+            address,
+            phone: req.body.phone || '',
+            showEmail: req.body.showEmail === 'true',
+            website: '',
+            insurance: {
+                noContract: false,
+                oegk: false,
+                svs: false,
+                bvaeb: false,
+                kfa: false
+            },
+            additionalInfo: '',
+            galleryPhotos: [],
+            photo: '',
+            isProfileComplete: false,
+            isAdmin: email === process.env.ADMIN_EMAIL,
+            isApproved: email === process.env.ADMIN_EMAIL,
+            nameSlug: formatNameForUrl(firstName, lastName),
+            registrationDate: new Date().toISOString()
+        };
+        
+        doctors.push(newDoctor);
+        saveDoctors(doctors);
+        
+        // Anmeldung nach erfolgreicher Registrierung
+        req.session.userId = email;
+        req.session.isAdmin = newDoctor.isAdmin;
+        req.session.message = {
+            type: 'success',
+            text: 'Registrierung erfolgreich! Sie können jetzt Ihr Profil vervollständigen.'
+        };
+        res.redirect('/profile');
+    } catch (error) {
+        console.error('Fehler bei der Registrierung:', error);
+        res.render('register', { error: 'Es ist ein Fehler aufgetreten.', t: res.locals.t });
     }
-
-    const doctors = getDoctors();
-    
-    if (doctors.find(d => d.email === email)) {
-        return res.render('register', { error: 'Diese E-Mail-Adresse ist bereits registriert', specialties: specialties });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const fullAddress = `${street}, ${zipCode} ${city}`;
-
-    const newDoctor = {
-        email,
-        password: hashedPassword,
-        title,
-        academicTitle,
-        firstName,
-        lastName,
-        specialties: [mainSpecialty],
-        address: fullAddress,
-        street,
-        city,
-        zipCode,
-        phone,
-        additionalInfo,
-        photo: '',
-        showEmail: false,
-        isProfileComplete: true,
-        isApproved: false,
-        registrationDate: new Date().toISOString()
-    };
-
-    doctors.push(newDoctor);
-    saveDoctors(doctors);
-
-    req.session.doctorId = email;
-    req.session.message = {
-        type: 'success',
-        text: 'Registrierung erfolgreich. Ihr Profil wird vom Administrator überprüft.'
-    };
-    res.redirect('/profile');
 });
 
 // Admin Middleware
@@ -678,10 +691,7 @@ function requireAdmin(req, res, next) {
     if (req.session.isAdmin) {
         next();
     } else {
-        res.status(403).render('error', { 
-            message: 'Zugriff verweigert',
-            error: { status: 403, stack: '' }
-        });
+        res.redirect('/login');
     }
 }
 
@@ -756,7 +766,7 @@ app.post('/admin/delete/:email', requireAdmin, (req, res) => {
 app.post('/admin/change-password', requireAdmin, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     const doctors = getDoctors();
-    const adminIndex = doctors.findIndex(d => d.email === req.session.doctorId);
+    const adminIndex = doctors.findIndex(d => d.email === req.session.userId || req.session.doctorId);
     
     if (adminIndex === -1) {
         return res.status(404).json({ success: false, message: 'Admin nicht gefunden' });
@@ -783,44 +793,62 @@ app.post('/admin/change-password', requireAdmin, async (req, res) => {
 app.post('/upload-gallery-photo', requireAuth, upload.single('galleryPhotos'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ success: false, message: 'Keine Datei hochgeladen' });
+            return res.status(400).json({ success: false, message: 'Bitte wählen Sie ein Bild zum Hochladen aus.' });
         }
 
+        const email = req.session.userId;
         const doctors = getDoctors();
-        const doctorIndex = doctors.findIndex(d => d.email === req.session.doctorId);
-        
+        const doctorIndex = doctors.findIndex(d => d.email === email);
+
         if (doctorIndex === -1) {
+            // Löschen der hochgeladenen Datei, wenn der Arzt nicht gefunden wird
+            if (req.file.path) {
+                fs.unlinkSync(req.file.path);
+            }
             return res.status(404).json({ success: false, message: 'Arzt nicht gefunden' });
         }
 
-        // Überprüfe Anzahl der vorhandenen Fotos
+        // Prüfen, ob bereits zwei Fotos vorhanden sind
         if (doctors[doctorIndex].galleryPhotos && doctors[doctorIndex].galleryPhotos.length >= 2) {
+            // Löschen der hochgeladenen Datei, da das Maximum erreicht ist
+            if (req.file.path) {
+                fs.unlinkSync(req.file.path);
+            }
             return res.status(400).json({ success: false, message: 'Maximale Anzahl an Fotos erreicht (2)' });
         }
 
-        // Bild verarbeiten
-        const processedFileName = `gallery-${Date.now()}.jpg`;
+        // Bildverarbeitung mit Sharp
+        const photoFileName = `gallery_${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`;
+        
+        // Bild verarbeiten und speichern
         await sharp(req.file.path)
-            .resize(600, 450, { // 4:3 Format
-                fit: 'cover',
-                position: 'center'
-            })
-            .jpeg({ quality: 80 })
-            .toFile(path.join(uploadsDir, processedFileName));
+            .resize({ width: 1200, height: 900, fit: 'inside' })
+            .jpeg({ quality: 85 })
+            .toFile(path.join(__dirname, 'public', 'uploads', photoFileName));
 
-        // Temporäre Datei löschen
-        await fsPromises.unlink(req.file.path);
+        // Temp-Datei löschen
+        fs.unlinkSync(req.file.path);
 
-        // Galeriefoto zur Arztdaten hinzufügen
+        // Array initialisieren, falls es noch nicht existiert
         if (!doctors[doctorIndex].galleryPhotos) {
             doctors[doctorIndex].galleryPhotos = [];
         }
-        doctors[doctorIndex].galleryPhotos.push(processedFileName);
+
+        // Foto zur Galerie hinzufügen
+        doctors[doctorIndex].galleryPhotos.push(photoFileName);
         saveDoctors(doctors);
 
-        res.redirect('/profile');
+        res.json({ 
+            success: true, 
+            photoUrl: `/uploads/${photoFileName}`,
+            photoCount: doctors[doctorIndex].galleryPhotos.length 
+        });
     } catch (error) {
         console.error('Fehler beim Hochladen des Galeriefotos:', error);
+        // Versuchen die temporäre Datei zu löschen im Fehlerfall
+        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
         res.status(500).json({ success: false, message: 'Fehler beim Hochladen des Fotos' });
     }
 });
@@ -829,7 +857,7 @@ app.post('/delete-gallery-photo', requireAuth, async (req, res) => {
     try {
         const { photoName } = req.body;
         const doctors = getDoctors();
-        const doctorIndex = doctors.findIndex(d => d.email === req.session.doctorId);
+        const doctorIndex = doctors.findIndex(d => d.email === req.session.userId || req.session.doctorId);
         
         if (doctorIndex === -1) {
             req.session.message = {

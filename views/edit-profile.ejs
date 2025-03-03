@@ -161,35 +161,35 @@
                             <label class="block text-sm font-medium leading-6 text-gray-900">Kassenverträge</label>
                             <div class="mt-2 space-y-2">
                                 <div class="flex items-center">
-                                    <input type="checkbox" id="noContract" name="insurance[noContract]" value="true" <%= doctor.insurance?.noContract ? 'checked' : '' %>
+                                    <input type="checkbox" id="noContract" name="noContract" value="true" <%= doctor.insurance?.noContract ? 'checked' : '' %>
                                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
                                     <label for="noContract" class="ml-3 block text-sm leading-6 text-gray-900">
                                         Nur Privatpatienten
                                     </label>
                                 </div>
                                 <div class="flex items-center">
-                                    <input type="checkbox" id="oegk" name="insurance[oegk]" value="true" <%= doctor.insurance?.oegk ? 'checked' : '' %>
+                                    <input type="checkbox" id="oegk" name="insurance_oegk" value="true" <%= doctor.insurance?.oegk ? 'checked' : '' %>
                                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
                                     <label for="oegk" class="ml-3 block text-sm leading-6 text-gray-900">
                                         ÖGK
                                     </label>
                                 </div>
                                 <div class="flex items-center">
-                                    <input type="checkbox" id="svs" name="insurance[svs]" value="true" <%= doctor.insurance?.svs ? 'checked' : '' %>
+                                    <input type="checkbox" id="svs" name="insurance_svs" value="true" <%= doctor.insurance?.svs ? 'checked' : '' %>
                                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
                                     <label for="svs" class="ml-3 block text-sm leading-6 text-gray-900">
                                         SVS
                                     </label>
                                 </div>
                                 <div class="flex items-center">
-                                    <input type="checkbox" id="bvaeb" name="insurance[bvaeb]" value="true" <%= doctor.insurance?.bvaeb ? 'checked' : '' %>
+                                    <input type="checkbox" id="bvaeb" name="insurance_bvaeb" value="true" <%= doctor.insurance?.bvaeb ? 'checked' : '' %>
                                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
                                     <label for="bvaeb" class="ml-3 block text-sm leading-6 text-gray-900">
                                         BVAEB
                                     </label>
                                 </div>
                                 <div class="flex items-center">
-                                    <input type="checkbox" id="kfa" name="insurance[kfa]" value="true" <%= doctor.insurance?.kfa ? 'checked' : '' %>
+                                    <input type="checkbox" id="kfa" name="insurance_kfa" value="true" <%= doctor.insurance?.kfa ? 'checked' : '' %>
                                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
                                     <label for="kfa" class="ml-3 block text-sm leading-6 text-gray-900">
                                         KFA
@@ -264,6 +264,12 @@
         </div>
     </div>
 
+    <!-- Versteckte Daten für JavaScript -->
+    <div id="specialties-data" data-specialties='<%- JSON.stringify(t("specialties.male")) %>' 
+         data-main-specialty="<%= doctor.specialties?.[0] %>"
+         data-secondary-specialty="<%= doctor.specialties?.[1] %>"
+         style="display: none;"></div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mainSpecialtySelect = document.getElementById('mainSpecialty');
@@ -271,10 +277,11 @@
             const noContractCheckbox = document.getElementById('noContract');
             const insuranceCheckboxes = ['oegk', 'svs', 'bvaeb', 'kfa'].map(id => document.getElementById(id));
             
-            // Fachgebiete initial füllen
-            const specialties = <%- JSON.stringify(t('specialties.male')) %>;
-            const currentMainSpecialty = '<%= doctor.specialties?.[0] %>';
-            const currentSecondarySpecialty = '<%= doctor.specialties?.[1] %>';
+            // Daten aus HTML-Attributen laden
+            const specialtiesData = document.getElementById('specialties-data');
+            const specialties = JSON.parse(specialtiesData.dataset.specialties);
+            const currentMainSpecialty = specialtiesData.dataset.mainSpecialty;
+            const currentSecondarySpecialty = specialtiesData.dataset.secondarySpecialty;
 
             mainSpecialtySelect.innerHTML = '<option value="">Bitte wählen</option>';
             secondarySpecialtySelect.innerHTML = '<option value="">Bitte wählen</option>';
@@ -303,6 +310,26 @@
                 insuranceCheckboxes.forEach(checkbox => checkbox.disabled = true);
             }
         });
+        
+        // Automatisches Übermitteln des Formulars beim Ändern des Profilfotos
+        const photoInput = document.getElementById('photo');
+        if (photoInput) {
+            photoInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    this.closest('form').submit();
+                }
+            });
+        }
+        
+        // Automatisches Übermitteln des Formulars beim Hochladen von Ordinationsfotos
+        const galleryInput = document.getElementById('galleryPhotos');
+        if (galleryInput) {
+            galleryInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    this.closest('form').submit();
+                }
+            });
+        }
     </script>
 </body>
 </html> 

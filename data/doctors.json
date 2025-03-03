@@ -11,5 +11,36 @@
     "isAdmin": true,
     "isApproved": true,
     "registrationDate": "2024-03-20T00:00:00.000Z"
+  },
+  {
+    "email": "ozsoy@gmx.at",
+    "password": "$2b$10$Uz66nSoTKQhIsuAZabMFl.FzC0.YSXwBS6F.fTFodHm/cW3GJGuMC",
+    "title": "Herr",
+    "academicTitle": "Priv. Doz. DDr. ",
+    "firstName": "Mehmet",
+    "lastName": "Özsoy",
+    "specialties": [
+      "Urologie"
+    ],
+    "originalSpecialty": null,
+    "address": "Neubaugürtel 47 / OG 5, 1150 Wien",
+    "phone": "013534414",
+    "showEmail": false,
+    "website": "",
+    "insurance": {
+      "noContract": false,
+      "oegk": false,
+      "svs": false,
+      "bvaeb": false,
+      "kfa": false
+    },
+    "additionalInfo": "",
+    "galleryPhotos": [],
+    "photo": "",
+    "isProfileComplete": false,
+    "isAdmin": false,
+    "isApproved": false,
+    "nameSlug": "mehmet-oezsoy",
+    "registrationDate": "2025-03-03T08:02:50.983Z"
   }
 ]
