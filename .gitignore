@@ -6,3 +6,7 @@ node_modules/.package-lock.json
 node_modules/
 public/uploads/
 public/css/output.css
+.env
+.env.local
+.env.development
+.env.production
