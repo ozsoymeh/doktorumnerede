@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Bild-Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .upload-container {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .btn {
+            background-color: #4f46e5;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #4338ca;
+        }
+    </style>
+</head>
+<body>
+    <h1>Parallax-Bild hochladen</h1>
+    <p>Wählen Sie das Bild aus, das als Parallax-Hintergrund verwendet werden soll:</p>
+    
+    <div class="upload-container">
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+            <button type="button" class="btn" onclick="document.getElementById('imageInput').click()">Bild auswählen</button>
+            <p id="fileName">Keine Datei ausgewählt</p>
+            <button type="button" class="btn" id="uploadBtn" disabled>Hochladen</button>
+        </form>
+    </div>
+    
+    <div id="result"></div>
+    
+    <script>
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const fileName = e.target.files[0] ? e.target.files[0].name : 'Keine Datei ausgewählt';
+            document.getElementById('fileName').textContent = fileName;
+            document.getElementById('uploadBtn').disabled = !e.target.files[0];
+        });
+        
+        document.getElementById('uploadBtn').addEventListener('click', function() {
+            const file = document.getElementById('imageInput').files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.onload = function() {
+                    // Kopiere das Bild in den richtigen Ordner
+                    copyImageToServer(e.target.result);
+                };
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        function copyImageToServer(dataUrl) {
+            // In einer echten Anwendung würde hier ein AJAX-Request zum Server gesendet
+            // Da wir das hier nicht implementieren können, geben wir nur Anweisungen
+            document.getElementById('result').innerHTML = `
+                <h2>Manuelle Schritte:</h2>
+                <ol>
+                    <li>Speichern Sie das ausgewählte Bild</li>
+                    <li>Benennen Sie es um in <code>doctors-parallax.jpg</code></li>
+                    <li>Kopieren Sie es in den Ordner <code>public/uploads/images/</code></li>
+                    <li>Starten Sie den Server neu mit <code>node server.js</code></li>
+                </ol>
+                <p>Das Bild wird dann im Parallax-Bereich angezeigt.</p>
+            `;
+        }
+    </script>
+</body>
+</html> 

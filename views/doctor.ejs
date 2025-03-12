@@ -39,9 +39,9 @@
                             </h1>
                             <div class="mt-2 text-lg text-gray-600">
                                 <% if (doctor.specialties && doctor.specialties.length > 0) { %>
-                                    <div><%= t('specialties.' + (doctor.title === 'Frau' ? 'female' : 'male') + '.' + doctor.specialties[0]) || doctor.specialties[0] %></div>
+                                    <div><%= t('specialties.' + (doctor.title === 'Frau' ? 'female' : 'male') + '.' + doctor.specialties[0].split('.').pop()) || doctor.specialties[0] %></div>
                                     <% if (doctor.specialties[1]) { %>
-                                        <div class="mt-1"><%= t('specialties.' + (doctor.title === 'Frau' ? 'female' : 'male') + '.' + doctor.specialties[1]) || doctor.specialties[1] %></div>
+                                        <div class="mt-1"><%= t('specialties.' + (doctor.title === 'Frau' ? 'female' : 'male') + '.' + doctor.specialties[1].split('.').pop()) || doctor.specialties[1] %></div>
                                     <% } %>
                                 <% } else if (doctor.originalSpecialty) { %>
                                     <%= doctor.title === 'Frau' ? 'Fachärztin für' : 'Facharzt für' %> <%= doctor.originalSpecialty.replace('Facharzt für ', '').replace('Fachärztin für ', '') %>
@@ -58,6 +58,7 @@
                         <div class="space-y-2">
                             <p class="flex items-center">
                                 <%= t('doctor.address') %>: <%= doctor.address %>
+                                <% if (doctor.addressLine2) { %><br><span class="ml-14"><%= doctor.addressLine2 %></span><% } %>
                             </p>
                             <p class="flex items-center">
                                 <%= t('doctor.phone') %>: <%= doctor.phone %>
@@ -116,9 +117,141 @@
                             </div>
                         </div>
                     <% } %>
+
+                    <!-- Google Maps Box -->
+                    <div class="mt-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-2"><%= t('doctor.location') || 'Standort' %></h2>
+                        <p class="text-gray-600 mb-4"><%= t('doctor.clickMapForDirections') || 'Klicken Sie auf die Karte, um die Route zu planen' %></p>
+                        <div id="map" class="w-full h-80 rounded-lg shadow-md"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Google Maps Script -->
+    <script>
+        // Map-Variablen
+        let map;
+        let marker;
+
+        // Initialisiere Google Maps mit der Adresse des Arztes
+        function initMap() {
+            try {
+                const mapDiv = document.getElementById('map');
+                if (!mapDiv) return;
+
+                // Adressdaten sammeln
+                const fullAddress = `<%= doctor.address || '' %>, <%= doctor.addressLine2 || '' %>`.trim();
+                
+                // Wenn keine Adresse vorhanden ist, Wien als Standard anzeigen
+                if (!fullAddress) {
+                    const defaultPosition = { lat: 48.2082, lng: 16.3738 }; // Wien
+                    map = new google.maps.Map(mapDiv, {
+                        center: defaultPosition,
+                        zoom: 13,
+                        mapTypeControl: false
+                    });
+                    
+                    // Info-Hinweis anzeigen
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mt-4';
+                    infoDiv.innerHTML = '<p>Keine Adressinformationen verfügbar.</p>';
+                    mapDiv.parentNode.insertBefore(infoDiv, mapDiv.nextSibling);
+                    
+                    return;
+                }
+                
+                // Geocoding durchführen
+                const geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ address: fullAddress + ', Österreich' }, function(results, status) {
+                    if (status === google.maps.GeocoderStatus.OK && results[0]) {
+                        const position = results[0].geometry.location;
+                        
+                        // Karte initialisieren
+                        map = new google.maps.Map(mapDiv, {
+                            center: position,
+                            zoom: 15,
+                            mapTypeControl: false
+                        });
+                        
+                        // Marker hinzufügen
+                        marker = new google.maps.Marker({
+                            position: position,
+                            map: map,
+                            title: fullAddress
+                        });
+                        
+                        // Info-Window mit Link für Routenplanung
+                        const contentString = `
+                            <div>
+                                <h3 style="font-weight: bold; margin-bottom: 5px;">Praxisstandort</h3>
+                                <p>${fullAddress}</p>
+                                <p style="margin-top: 10px;">
+                                    <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress + ', Österreich')}" 
+                                       target="_blank" 
+                                       style="color: #2563eb; text-decoration: none;">
+                                        Routenplanung starten
+                                    </a>
+                                </p>
+                            </div>
+                        `;
+                        
+                        const infoWindow = new google.maps.InfoWindow({
+                            content: contentString
+                        });
+                        
+                        // Öffne Info-Window beim Klick auf den Marker
+                        marker.addListener('click', function() {
+                            infoWindow.open(map, marker);
+                        });
+                        
+                        // Info-Window initial öffnen
+                        infoWindow.open(map, marker);
+                    } else {
+                        console.error('Geocoding fehlgeschlagen:', status);
+                        
+                        // Fallback auf Wien
+                        const defaultPosition = { lat: 48.2082, lng: 16.3738 }; // Wien
+                        map = new google.maps.Map(mapDiv, {
+                            center: defaultPosition,
+                            zoom: 12
+                        });
+                        
+                        // Fehlermeldung anzeigen
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-4';
+                        errorDiv.innerHTML = '<p>Die Adresse konnte nicht auf der Karte gefunden werden.</p>';
+                        mapDiv.parentNode.insertBefore(errorDiv, mapDiv.nextSibling);
+                    }
+                });
+            } catch (error) {
+                console.error('Fehler bei der Karteninitialisierung:', error);
+            }
+        }
+
+        // API laden
+        function loadGoogleMapsAPI() {
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=<%= googleMapsApiKey %>&callback=initMap&v=weekly`;
+            script.async = true;
+            script.defer = true;
+            
+            script.onerror = function() {
+                console.error('Fehler beim Laden der Google Maps API');
+                const mapDiv = document.getElementById('map');
+                if (mapDiv) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative';
+                    errorDiv.innerHTML = '<p>Google Maps konnte nicht geladen werden. Bitte versuchen Sie es später erneut.</p>';
+                    mapDiv.parentNode.replaceChild(errorDiv, mapDiv);
+                }
+            };
+            
+            document.head.appendChild(script);
+        }
+
+        loadGoogleMapsAPI();
+    </script>
 </body>
 </html> 

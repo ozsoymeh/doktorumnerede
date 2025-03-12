@@ -6,6 +6,8 @@ const fs = require('fs');
 const multer = require('multer');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
+// MySQL/MariaDB Session-Speicher
+const MySQLStore = require('express-mysql-session')(session);
 const sharp = require('sharp');
 const fsPromises = require('fs').promises;
 
@@ -151,41 +153,94 @@ const specialties = {
     ]
 };
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
-app.use(session({
+// Session-Konfiguration
+const sessionOptions = {
     secret: process.env.SESSION_SECRET || 'geheim',
     resave: false,
     saveUninitialized: true,
     cookie: {
-        secure: false, // Auf true setzen, wenn HTTPS verwendet wird
+        secure: process.env.NODE_ENV === 'production', // Nur in Produktion auf true
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000 // 24 Stunden
     }
-}));
+};
+
+// In Produktion MariaDB/MySQL Session-Speicher verwenden
+if (process.env.NODE_ENV === 'production') {
+    // Datenbank-Konfiguration
+    const dbOptions = {
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 3306,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME || 'mehmet',
+        // Optional: Für bessere Leistung
+        clearExpired: true,
+        checkExpirationInterval: 900000, // Alle 15 Minuten aufräumen
+        createDatabaseTable: true, // Tabelle automatisch erstellen, falls nicht vorhanden
+        schema: {
+            tableName: 'sessions',
+            columnNames: {
+                session_id: 'session_id',
+                expires: 'expires',
+                data: 'data'
+            }
+        }
+    };
+    
+    // Prüfen, ob Datenbank-Anmeldedaten vorhanden sind
+    if (process.env.DB_USER && process.env.DB_PASSWORD) {
+        console.log('Verwende MariaDB/MySQL für Session-Speicher');
+        const sessionStore = new MySQLStore(dbOptions);
+        sessionOptions.store = sessionStore;
+    } else {
+        console.warn('Keine Datenbank-Anmeldedaten gefunden. MemoryStore wird verwendet (nicht empfohlen für Produktion)');
+    }
+}
+
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
+app.use(session(sessionOptions));
 
 // Middleware für Übersetzungen
 app.use((req, res, next) => {
-    // Sprache aus Query-Parameter oder Session oder Default
-    const lang = req.query.lang || req.session.lang || 'de';
-    req.session.lang = lang;
-
-    // Übersetzungsfunktion
-    res.locals.t = (key) => {
-        const keys = key.split('.');
-        let value = translations[lang];
-        for (const k of keys) {
-            value = value?.[k];
+    try {
+        // Sprache aus Query-Parameter oder Session oder Default
+        // Sicherer Zugriff mit Fallbacks
+        const lang = (req.query && req.query.lang) || (req.session && req.session.lang) || 'de';
+        
+        // Sicherstellen, dass die Session existiert
+        if (req.session) {
+            req.session.lang = lang;
         }
-        return value || key;
-    };
 
-    // Aktuelle Sprache
-    res.locals.lang = lang;
+        // Übersetzungsfunktion
+        res.locals.t = (key) => {
+            try {
+                const keys = key.split('.');
+                let value = translations[lang];
+                for (const k of keys) {
+                    value = value?.[k];
+                }
+                return value || key;
+            } catch (error) {
+                console.error(`Fehler bei Übersetzung für Schlüssel '${key}'`, error);
+                return key; // Fallback auf den ursprünglichen Schlüssel
+            }
+        };
 
-    next();
+        // Aktuelle Sprache
+        res.locals.lang = lang;
+        next();
+    } catch (error) {
+        console.error('Fehler in der Übersetzungs-Middleware:', error);
+        // Setze trotzdem grundlegende Übersetzungsfunktion und Sprache
+        res.locals.t = key => key;
+        res.locals.lang = 'de';
+        next();
+    }
 });
 
 // View Engine
@@ -355,21 +410,55 @@ app.get('/', (req, res) => {
         cities,
         zipCodes,
         formatNameForUrl,
-        lang: req.query.lang || req.session.lang || 'de',
-        t: res.locals.t
+        lang: (req.query && req.query.lang) || (req.session && req.session.lang) || 'de',
+        t: res.locals.t || (key => key)
     });
 });
 
 // Neue Route für öffentliche Arztprofile
 app.get('/doctor/:nameSlug', (req, res) => {
-    const doctors = getDoctors();
-    const doctor = doctors.find(d => formatNameForUrl(d.firstName, d.lastName) === req.params.nameSlug);
-    
-    if (!doctor) {
-        return res.status(404).send('Arzt nicht gefunden');
-    }
+    try {
+        const doctors = getDoctors();
+        const doctor = doctors.find(d => formatNameForUrl(d.firstName, d.lastName) === req.params.nameSlug);
+        
+        if (!doctor) {
+            return res.status(404).send('Arzt nicht gefunden');
+        }
 
-    res.render('doctor', { doctor });
+        // Verwende einfache, robuste Übersetzungslogik
+        const lang = (req.query && req.query.lang) || (req.session && req.session.lang) || 'de';
+        
+        // Erstelle eine Übersetzungsfunktion ähnlich wie in der Middleware
+        const t = function(key) {
+            try {
+                const keys = key.split('.');
+                let value = translations[lang];
+                if (!value) {
+                    value = translations.de; // Fallback auf Deutsch
+                }
+                
+                for (const k of keys) {
+                    value = value?.[k];
+                    if (value === undefined) break;
+                }
+                return value || key;
+            } catch (error) {
+                console.error(`Fehler bei Übersetzung für Schlüssel '${key}'`, error);
+                return key; // Fallback auf den ursprünglichen Schlüssel
+            }
+        };
+        
+        // Übergebe sowohl den Arzt als auch den API-Schlüssel an das Template
+        res.render('doctor', { 
+            doctor,
+            lang,
+            t, // Eine Funktion, keine Objekt
+            googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '' 
+        });
+    } catch (error) {
+        console.error('Fehler beim Laden des Arztprofils:', error);
+        res.status(500).send('Ein Fehler ist aufgetreten beim Laden des Arztprofils.');
+    }
 });
 
 // Login Routes
@@ -423,9 +512,34 @@ app.get('/profile', requireAuth, (req, res) => {
     res.render('profile', { 
         doctor: doctor,
         specialties: specialties,
-        message: req.session.message
+        message: req.session.message,
+        googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || ''
     });
     delete req.session.message;
+});
+
+app.get('/edit-profile', requireAuth, (req, res) => {
+    const doctors = getDoctors();
+    const doctor = doctors.find(d => d.email === req.session.userId);
+    
+    if (!doctor) {
+        return res.redirect('/login');
+    }
+    
+    const success = req.session.success === true;
+    const error = req.session.error || null;
+    
+    // Lösche Statusmeldungen aus der Session
+    delete req.session.success;
+    delete req.session.error;
+    
+    res.render('edit-profile', { 
+        doctor, 
+        specialties,
+        success,
+        error,
+        googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || ''
+    });
 });
 
 app.post('/profile/edit', requireAuth, upload.fields([
@@ -452,6 +566,10 @@ app.post('/profile/edit', requireAuth, upload.fields([
         const updatedDoctor = {
             ...doctors[doctorIndex],
             ...req.body,
+            street: req.body.street || doctors[doctorIndex].street || '',
+            zipCode: req.body.zipCode || doctors[doctorIndex].zipCode || '',
+            city: req.body.city || doctors[doctorIndex].city || '',
+            addressLine2: req.body.addressLine2 || doctors[doctorIndex].addressLine2 || '',
             insurance: {
                 noContract: req.body.noContract === "true",
                 oegk: req.body.insurance_oegk === "true" || req.body["insurance[oegk]"] === "true",
@@ -528,6 +646,7 @@ app.post('/profile/edit', requireAuth, upload.fields([
             type: 'success',
             text: 'Ihre Änderungen wurden erfolgreich gespeichert.'
         };
+        req.session.success = true;
 
         res.redirect('/profile');
     } catch (error) {
@@ -536,6 +655,8 @@ app.post('/profile/edit', requireAuth, upload.fields([
             type: 'error',
             text: 'Beim Speichern der Änderungen ist ein Fehler aufgetreten.'
         };
+        req.session.error = 'Beim Speichern der Änderungen ist ein Fehler aufgetreten.';
+
         res.redirect('/profile');
     }
 });
@@ -558,8 +679,29 @@ app.post('/upload-photo', requireAuth, upload.single('photo'), async (req, res) 
             return res.status(404).json({ success: false, message: 'Arzt nicht gefunden' });
         }
 
+        // Arzt-ID verwenden oder erstellen, wenn sie nicht existiert
+        if (!doctors[index].doctorId) {
+            let maxId = 0;
+            doctors.forEach(doctor => {
+                if (doctor.doctorId) {
+                    const idNumber = parseInt(doctor.doctorId.split('_')[1]);
+                    if (!isNaN(idNumber) && idNumber > maxId) {
+                        maxId = idNumber;
+                    }
+                }
+            });
+            doctors[index].doctorId = `id_${String(maxId + 1).padStart(4, '0')}`;
+        }
+
+        // Arztspezifischen Ordner erstellen
+        const doctorDir = path.join(__dirname, 'public', 'uploads', doctors[index].doctorId);
+        if (!fs.existsSync(doctorDir)) {
+            fs.mkdirSync(doctorDir, { recursive: true });
+        }
+
         // Bildverarbeitung mit Sharp
-        const photoFileName = `profile_${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`;
+        const photoFileName = `profile_${Date.now()}.jpg`;
+        const fullPhotoPath = path.join(doctorDir, photoFileName);
         
         // Altes Foto löschen falls vorhanden
         if (doctors[index].photo && doctors[index].photo !== '') {
@@ -573,16 +715,16 @@ app.post('/upload-photo', requireAuth, upload.single('photo'), async (req, res) 
         await sharp(req.file.path)
             .resize({ width: 500, height: 500, fit: 'cover' })
             .jpeg({ quality: 90 })
-            .toFile(path.join(__dirname, 'public', 'uploads', photoFileName));
+            .toFile(fullPhotoPath);
 
         // Temp-Datei löschen
         fs.unlinkSync(req.file.path);
 
-        // Datenbank aktualisieren
-        doctors[index].photo = photoFileName;
+        // Datenbank aktualisieren mit dem relativen Pfad
+        doctors[index].photo = `${doctors[index].doctorId}/${photoFileName}`;
         saveDoctors(doctors);
 
-        res.json({ success: true, photoUrl: `/uploads/${photoFileName}` });
+        res.json({ success: true, photoUrl: `/uploads/${doctors[index].doctorId}/${photoFileName}` });
     } catch (error) {
         console.error('Fehler beim Hochladen des Fotos:', error);
         // Versuchen die temporäre Datei zu löschen im Fehlerfall
@@ -613,7 +755,16 @@ app.post('/upload', requireAdmin, upload.single('excel'), async (req, res) => {
 
 // Registrierungs-Routes
 app.get('/register', (req, res) => {
-    res.render('register', { error: null, specialties: specialties });
+    try {
+        // Deutsche Fachgebiete für die Registrierung verwenden (einfacherer, robusterer Ansatz)
+        res.render('register', {
+            error: null,
+            specialties: translations.de.specialties
+        });
+    } catch (error) {
+        console.error('Fehler beim Rendern der Registrierungsseite:', error);
+        res.status(500).send('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
+    }
 });
 
 app.post('/register', async (req, res) => {
@@ -622,24 +773,44 @@ app.post('/register', async (req, res) => {
         
         // Validierung
         if (password !== confirmPassword) {
-            return res.render('register', { error: 'Die Passwörter stimmen nicht überein', t: res.locals.t });
+            return res.render('register', { 
+                error: 'Die Passwörter stimmen nicht überein', 
+                specialties: translations.de.specialties // Deutsche Fachgebiete
+            });
         }
         
         const doctors = getDoctors();
         
         // Überprüfen, ob E-Mail bereits existiert
         if (doctors.some(doc => doc.email === email)) {
-            return res.render('register', { error: 'E-Mail wird bereits verwendet', t: res.locals.t });
+            return res.render('register', { 
+                error: 'E-Mail wird bereits verwendet', 
+                specialties: translations.de.specialties // Deutsche Fachgebiete
+            });
         }
         
         // Adressformatierung
         const street = req.body.street || '';
         const zipCode = req.body.zipCode || '';
         const city = req.body.city || '';
+        const addressLine2 = req.body.addressLine2 || '';
         const address = `${street}, ${zipCode} ${city}`.trim();
+        
+        // Generiere eine fortlaufende ID
+        let maxId = 0;
+        doctors.forEach(doctor => {
+            if (doctor.doctorId) {
+                const idNumber = parseInt(doctor.doctorId.split('_')[1]);
+                if (!isNaN(idNumber) && idNumber > maxId) {
+                    maxId = idNumber;
+                }
+            }
+        });
+        const doctorId = `id_${String(maxId + 1).padStart(4, '0')}`;
         
         // Neuen Arzt erstellen
         const newDoctor = {
+            doctorId,
             email,
             password: await bcrypt.hash(password, 10),
             title,
@@ -649,6 +820,10 @@ app.post('/register', async (req, res) => {
             specialties: mainSpecialty ? [mainSpecialty] : [],
             originalSpecialty: null, // Standardwert für originalSpecialty
             address,
+            addressLine2,
+            street,
+            zipCode,
+            city,
             phone: req.body.phone || '',
             showEmail: req.body.showEmail === 'true',
             website: '',
@@ -682,7 +857,11 @@ app.post('/register', async (req, res) => {
         res.redirect('/profile');
     } catch (error) {
         console.error('Fehler bei der Registrierung:', error);
-        res.render('register', { error: 'Es ist ein Fehler aufgetreten.', t: res.locals.t });
+        // Keine Nutzung von res.locals.t hier, um Folgefehler zu vermeiden
+        res.render('register', { 
+            error: 'Es ist ein Fehler aufgetreten.', 
+            specialties: translations.de.specialties // Deutsche Fachgebiete
+        });
     }
 });
 
@@ -808,6 +987,26 @@ app.post('/upload-gallery-photo', requireAuth, upload.single('galleryPhotos'), a
             return res.status(404).json({ success: false, message: 'Arzt nicht gefunden' });
         }
 
+        // Arzt-ID verwenden oder erstellen, wenn sie nicht existiert
+        if (!doctors[doctorIndex].doctorId) {
+            let maxId = 0;
+            doctors.forEach(doctor => {
+                if (doctor.doctorId) {
+                    const idNumber = parseInt(doctor.doctorId.split('_')[1]);
+                    if (!isNaN(idNumber) && idNumber > maxId) {
+                        maxId = idNumber;
+                    }
+                }
+            });
+            doctors[doctorIndex].doctorId = `id_${String(maxId + 1).padStart(4, '0')}`;
+        }
+
+        // Arztspezifischen Ordner erstellen
+        const doctorDir = path.join(__dirname, 'public', 'uploads', doctors[doctorIndex].doctorId);
+        if (!fs.existsSync(doctorDir)) {
+            fs.mkdirSync(doctorDir, { recursive: true });
+        }
+
         // Prüfen, ob bereits zwei Fotos vorhanden sind
         if (doctors[doctorIndex].galleryPhotos && doctors[doctorIndex].galleryPhotos.length >= 2) {
             // Löschen der hochgeladenen Datei, da das Maximum erreicht ist
@@ -818,13 +1017,14 @@ app.post('/upload-gallery-photo', requireAuth, upload.single('galleryPhotos'), a
         }
 
         // Bildverarbeitung mit Sharp
-        const photoFileName = `gallery_${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`;
+        const photoFileName = `gallery_${Date.now()}.jpg`;
+        const fullPhotoPath = path.join(doctorDir, photoFileName);
         
         // Bild verarbeiten und speichern
         await sharp(req.file.path)
             .resize({ width: 1200, height: 900, fit: 'inside' })
             .jpeg({ quality: 85 })
-            .toFile(path.join(__dirname, 'public', 'uploads', photoFileName));
+            .toFile(fullPhotoPath);
 
         // Temp-Datei löschen
         fs.unlinkSync(req.file.path);
@@ -834,13 +1034,13 @@ app.post('/upload-gallery-photo', requireAuth, upload.single('galleryPhotos'), a
             doctors[doctorIndex].galleryPhotos = [];
         }
 
-        // Foto zur Galerie hinzufügen
-        doctors[doctorIndex].galleryPhotos.push(photoFileName);
+        // Foto zur Galerie hinzufügen mit relativem Pfad
+        doctors[doctorIndex].galleryPhotos.push(`${doctors[doctorIndex].doctorId}/${photoFileName}`);
         saveDoctors(doctors);
 
         res.json({ 
             success: true, 
-            photoUrl: `/uploads/${photoFileName}`,
+            photoUrl: `/uploads/${doctors[doctorIndex].doctorId}/${photoFileName}`,
             photoCount: doctors[doctorIndex].galleryPhotos.length 
         });
     } catch (error) {
@@ -849,7 +1049,7 @@ app.post('/upload-gallery-photo', requireAuth, upload.single('galleryPhotos'), a
         if (req.file && req.file.path && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
         }
-        res.status(500).json({ success: false, message: 'Fehler beim Hochladen des Fotos' });
+        res.status(500).json({ success: false, message: 'Fehler beim Hochladen des Galeriefotos' });
     }
 });
 

@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities; 
+
+/* Benutzerdefinierte Styles */
+@layer utilities {
+  .parallax-container {
+    background-attachment: fixed;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000;
+    will-change: transform;
+    background-position: center top;
+    background-size: cover;
+  }
+} 

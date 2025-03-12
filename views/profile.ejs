@@ -20,7 +20,7 @@
                     <div class="flex items-center">
                         <form action="/logout" method="POST">
                             <button type="submit" class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                                Çıkış Yap
+                                <%= lang === 'tr' ? 'Çıkış Yap' : 'Abmelden' %>
                             </button>
                         </form>
                     </div>
@@ -111,8 +111,7 @@
                         <!-- Persönliche Informationen -->
                         <div class="border-b border-gray-900/10 pb-12">
                             <h2 class="text-base font-semibold leading-7 text-gray-900">Persönliche Informationen</h2>
-                            <p class="mt-1 text-sm leading-6 text-gray-600">Kullanınız bir adres, posta geldiğinde alabilirsiniz.</p>
-
+                         
                             <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
                                 <div class="sm:col-span-2">
                                     <label for="title" class="block text-sm font-medium leading-6 text-gray-900">Anrede *</label>
@@ -161,20 +160,36 @@
                                 </div>
 
                                 <div class="col-span-full">
+                                    <label for="address" class="block text-sm font-medium leading-6 text-gray-900">Adresse *</label>
+                                    <div class="mt-2">
+                                        <input type="text" id="address" name="address" placeholder=" Beginnen Sie mit der Eingabe Ihrer Adresse..." class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                    </div>
+                                    <p class="mt-1 text-sm text-gray-500">Wählen Sie eine Adresse aus den Vorschlägen für eine genaue Validierung</p>
+                                </div>
+
+                                <div class="col-span-full hidden">
                                     <label for="street" class="block text-sm font-medium leading-6 text-gray-900">Straße und Hausnummer *</label>
                                     <div class="mt-2">
                                         <input type="text" id="street" name="street" value="<%= doctor.street || '' %>" required class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
-                                <div class="sm:col-span-2 sm:col-start-1">
+                                <div class="col-span-full">
+                                    <label for="addressLine2" class="block text-sm font-medium leading-6 text-gray-900">Adresszusatz (optional)</label>
+                                    <div class="mt-2">
+                                        <input type="text" id="addressLine2" name="addressLine2" value="<%= doctor.addressLine2 || '' %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder=" z.B. Stiege, Tür, Stockwerk, Gebäude">
+                                    </div>
+                                    <p class="mt-1 text-sm text-gray-500">Zusätzliche Informationen zu Ihrer Adresse</p>
+                                </div>
+
+                                <div class="sm:col-span-2 sm:col-start-1 hidden">
                                     <label for="zipCode" class="block text-sm font-medium leading-6 text-gray-900">PLZ *</label>
                                     <div class="mt-2">
                                         <input type="text" id="zipCode" name="zipCode" value="<%= doctor.zipCode || '' %>" required class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
-                                <div class="sm:col-span-4">
+                                <div class="sm:col-span-4 hidden">
                                     <label for="city" class="block text-sm font-medium leading-6 text-gray-900">Stadt *</label>
                                     <div class="mt-2">
                                         <input type="text" id="city" name="city" value="<%= doctor.city || '' %>" required class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
@@ -288,11 +303,34 @@
                         </button>
                     </div>
                 </form>
+                
+                <!-- Google Maps Box hinzufügen -->
+                <div class="mt-12 border-t border-gray-900/10 pt-10">
+                    <h2 class="text-base font-semibold leading-7 text-gray-900">Standort</h2>
+                    <p class="mt-1 text-sm leading-6 text-gray-600">
+                        Hier finden Sie den Standort der Praxis. Klicken Sie auf die Karte, um die Route zu planen.
+                    </p>
+                    
+                    <div class="mt-6">
+                        <div id="map" class="w-full h-96 rounded-lg shadow-md"></div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
 
+    <!-- Spezifische JavaScript-Daten aus dem Server -->
+    <div id="js-data" 
+        data-specialties="<%= JSON.stringify(specialties) %>"
+        data-lang="<%= typeof lang !== 'undefined' ? lang : 'de' %>"
+        style="display: none;">
+    </div>
+    
     <script>
+        // Daten aus dem verborgenen Element laden
+        const dataElement = document.getElementById('js-data');
+        const specialtiesData = JSON.parse(dataElement.dataset.specialties);
+
         // Foto-Validierung
         function validateImage(file, maxSize = 1) {
             // Überprüfe Dateityp
@@ -351,6 +389,289 @@
                 this.closest('form').submit();
             }
         });
-    </script>
+
+
+    // Google Maps Places API für Adressvalidierung
+    function initAutocomplete() {
+        try {
+            const streetInput = document.getElementById('street');
+            const zipCodeInput = document.getElementById('zipCode');
+            const cityInput = document.getElementById('city');
+            const addressInput = document.getElementById('address');
+
+            // Prefill combined address if single fields exist
+            const streetVal = streetInput.value;
+            const zipCodeVal = zipCodeInput.value;
+            const cityVal = cityInput.value;
+
+            if (streetVal && zipCodeVal && cityVal) {
+                addressInput.value = `${streetVal}, ${zipCodeVal} ${cityVal}`;
+            }
+
+            const autocompleteOptions = {
+                componentRestrictions: { country: ['at'] },
+                fields: ['address_component', 'geometry'],
+                types: ['address']
+            };
+
+            const autocomplete = new google.maps.places.Autocomplete(addressInput, autocompleteOptions);
+
+            autocomplete.addListener('place_changed', function () {
+                try {
+                    const place = autocomplete.getPlace();
+
+                    if (!place || !place.geometry) {
+                        addressInput.classList.add('border-red-500');
+                        return;
+                    }
+
+                    addressInput.classList.remove('border-red-500');
+
+                    let streetFromPlace = '';
+                    let streetNumber = '';
+                    let zipCode = '';
+                    let city = '';
+
+                    for (const component of place.address_components || []) {
+                        const componentType = component.types[0];
+
+                        switch (componentType) {
+                            case 'route':
+                                streetFromPlace = component.long_name;
+                                break;
+                            case 'street_number':
+                                streetNumber = component.long_name;
+                                break;
+                            case 'postal_code':
+                                zipCode = component.long_name;
+                                break;
+                            case 'locality':
+                                city = component.long_name;
+                                break;
+                        }
+                    }
+
+                    const fullStreet = streetFromPlace + (streetNumber ? ' ' + streetNumber : '');
+
+                    streetInput.value = fullStreet;
+                    zipCodeInput.value = zipCode;
+                    cityInput.value = city;
+
+                    console.log('Parsed address:', fullStreet, zipCode, city);
+
+                    if (!streetFromPlace || !zipCode || !city) {
+                        alert('Bitte wählen Sie eine vollständige Adresse mit Straße, PLZ und Stadt');
+                    }
+                } catch (error) {
+                    console.error('Fehler bei place_changed:', error);
+                    streetInput.value = addressInput.value;
+                }
+            });
+
+            addressInput.addEventListener('blur', function () {
+                setTimeout(() => {
+                    if (!streetInput.value && addressInput.value.trim().length > 0) {
+                        streetInput.value = addressInput.value;
+                        console.log('Manuelle Adresseingabe übernommen:', addressInput.value);
+                    }
+                }, 300);
+            });
+
+            console.log('Google Maps Autocomplete erfolgreich initialisiert');
+        } catch (error) {
+            console.error('Fehler bei Autocomplete-Initialisierung:', error);
+            const fallbackAddressInput = document.getElementById('address');
+            fallbackAddressInput.addEventListener('blur', function () {
+                document.getElementById('street').value = fallbackAddressInput.value;
+            });
+        }
+    }
+
+    // API Fallback bei Ladefehler
+    window.gm_authFailure = function () {
+        console.error('Google Maps Authentifizierungsfehler');
+        const addressInput = document.getElementById('address');
+        addressInput.placeholder = 'Bitte geben Sie Ihre vollständige Adresse ein';
+        addressInput.addEventListener('blur', function () {
+            const parts = this.value.split(',');
+            if (parts.length > 1) {
+                document.getElementById('street').value = parts[0].trim();
+                const cityParts = parts[1].trim().split(' ');
+                if (cityParts.length > 1) {
+                    document.getElementById('zipCode').value = cityParts[0].trim();
+                    document.getElementById('city').value = cityParts.slice(1).join(' ').trim();
+                } else {
+                    document.getElementById('city').value = cityParts[0].trim();
+                }
+            } else {
+                document.getElementById('street').value = this.value;
+            }
+        });
+    };
+
+    // Retry if Google API fails to load
+    setTimeout(function () {
+        if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+            gm_authFailure();
+        }
+    }, 5000);
+
+    // Formularvalidierung beim Absenden
+    document.querySelector('form')?.addEventListener('submit', function (e) {
+        const street = document.getElementById('street').value.trim();
+        const address = document.getElementById('address').value.trim();
+
+        // Fallback: Wenn Straße leer, aber Adresse vorhanden → übernehmen
+        if (!street && address) {
+            document.getElementById('street').value = address;
+        }
+
+        // Verhindere Absenden nur wenn gar nichts eingegeben wurde
+        if (!street && !address) {
+            e.preventDefault();
+            alert('Bitte geben Sie mindestens eine Adresse ein');
+            document.getElementById('address').focus();
+        }
+    });
+
+    // API nachladen
+    let retryCount = 0;
+    const maxRetries = 2;
+
+    function loadGoogleMapsAPI() {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBdLX-Lh95i1L-2-ed-FLzQC0_m8pE&libraries=places&callback=initPage&v=weekly`;
+        script.async = true;
+        script.defer = true;
+
+        script.onerror = function () {
+            console.error('Fehler beim Laden der Google Maps API');
+            if (retryCount < maxRetries) {
+                retryCount++;
+                console.log(`Retrying... (${retryCount}/${maxRetries})`);
+                setTimeout(loadGoogleMapsAPI, 1000);
+            } else {
+                gm_authFailure();
+            }
+        };
+
+        document.head.appendChild(script);
+    }
+
+    // Map-Variablen
+    let map;
+    let marker;
+
+    // Kombinierte Initialisierungsfunktion für Google Maps
+    function initPage() {
+        // Initialisiere Autocomplete für Adresseingabe
+        initAutocomplete();
+        
+        // Initialisiere die Karte
+        initMap();
+    }
+
+    // Initialisiere Google Maps mit der Adresse des Arztes
+    function initMap() {
+        try {
+            const mapDiv = document.getElementById('map');
+            if (!mapDiv) return;
+
+            // Adressdaten sammeln
+            const street = document.getElementById('street').value;
+            const zipCode = document.getElementById('zipCode').value;
+            const city = document.getElementById('city').value;
+            
+            // Wenn keine vollständige Adresse vorhanden ist, Wien als Standard anzeigen
+            if (!street || !zipCode || !city) {
+                const defaultPosition = { lat: 48.2082, lng: 16.3738 }; // Wien
+                map = new google.maps.Map(mapDiv, {
+                    center: defaultPosition,
+                    zoom: 13,
+                    mapTypeControl: false
+                });
+                
+                // Info-Hinweis anzeigen
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mt-4';
+                infoDiv.innerHTML = '<p>Bitte geben Sie Ihre vollständige Adresse ein, um Ihren Standort auf der Karte anzuzeigen.</p>';
+                mapDiv.parentNode.insertBefore(infoDiv, mapDiv.nextSibling);
+                
+                return;
+            }
+            
+            // Vollständige Adresse für Geocoding
+            const fullAddress = `${street}, ${zipCode} ${city}, Österreich`;
+            
+            // Geocoding durchführen
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: fullAddress }, function(results, status) {
+                if (status === google.maps.GeocoderStatus.OK && results[0]) {
+                    const position = results[0].geometry.location;
+                    
+                    // Karte initialisieren
+                    map = new google.maps.Map(mapDiv, {
+                        center: position,
+                        zoom: 15,
+                        mapTypeControl: false
+                    });
+                    
+                    // Marker hinzufügen
+                    marker = new google.maps.Marker({
+                        position: position,
+                        map: map,
+                        title: fullAddress
+                    });
+                    
+                    // Info-Window mit Link für Routenplanung
+                    const contentString = `
+                        <div>
+                            <h3 class="font-bold">Praxisstandort</h3>
+                            <p>${fullAddress}</p>
+                            <p class="mt-2">
+                                <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}" 
+                                   target="_blank" 
+                                   class="text-blue-600 hover:text-blue-800">
+                                    Routenplanung starten
+                                </a>
+                            </p>
+                        </div>
+                    `;
+                    
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: contentString
+                    });
+                    
+                    // Öffne Info-Window beim Klick auf den Marker
+                    marker.addListener('click', function() {
+                        infoWindow.open(map, marker);
+                    });
+                    
+                    // Info-Window initial öffnen
+                    infoWindow.open(map, marker);
+                } else {
+                    console.error('Geocoding fehlgeschlagen:', status);
+                    
+                    // Fallback auf Wien
+                    const defaultPosition = { lat: 48.2082, lng: 16.3738 }; // Wien
+                    map = new google.maps.Map(mapDiv, {
+                        center: defaultPosition,
+                        zoom: 12
+                    });
+                    
+                    // Fehlermeldung anzeigen
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-4';
+                    errorDiv.innerHTML = '<p>Die Adresse konnte nicht auf der Karte gefunden werden. Bitte überprüfen Sie Ihre Adressangaben.</p>';
+                    mapDiv.parentNode.insertBefore(errorDiv, mapDiv.nextSibling);
+                }
+            });
+        } catch (error) {
+            console.error('Fehler bei der Karteninitialisierung:', error);
+        }
+    }
+
+    loadGoogleMapsAPI();
+</script>
 </body>
-</html> 
+</html>
