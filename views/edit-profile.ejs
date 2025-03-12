@@ -51,6 +51,13 @@
                         </div>
                     <% } %>
 
+                    <% if (errors && errors.length > 0) { %>
+                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                            <strong class="font-bold">Fehler:</strong>
+                            <span class="block sm:inline"><%= errors.join(', ') %></span>
+                        </div>
+                    <% } %>
+
                     <form action="/profile/edit" method="POST" enctype="multipart/form-data" class="space-y-6">
                         <div>
                             <label for="title" class="block text-sm font-medium leading-6 text-gray-900">Anrede *</label>
@@ -110,9 +117,9 @@
                         </div>
 
                         <div>
-                            <label for="street" class="block text-sm font-medium leading-6 text-gray-900">Straße und Hausnummer *</label>
+                            <label for="street" class="block text-sm font-medium leading-6 text-gray-900">Straße und Hausnummer</label>
                             <div class="mt-2">
-                                <input type="text" id="street" name="street" value="<%= doctor.street %>" required
+                                <input type="text" id="street" name="street" value="<%= doctor.street %>"
                                     class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                             </div>
                         </div>
@@ -264,14 +271,17 @@
         </div>
     </div>
 
-    <!-- Versteckte Daten für JavaScript -->
-    <div id="specialties-data" data-specialties='<%- JSON.stringify(t("specialties.male")) %>' 
-         data-main-specialty="<%= doctor.specialties?.[0] %>"
-         data-secondary-specialty="<%= doctor.specialties?.[1] %>"
-         style="display: none;"></div>
+    <!-- Daten für JavaScript -->
+    <div id="specialties-data" 
+        data-specialties="<%= JSON.stringify(specialties) %>"
+        data-main-specialty="<%= doctor.specialties && doctor.specialties[0] ? doctor.specialties[0] : '' %>" 
+        data-secondary-specialty="<%= doctor.specialties && doctor.specialties[1] ? doctor.specialties[1] : '' %>"
+        style="display:none;">
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            const titleSelect = document.getElementById('title');
             const mainSpecialtySelect = document.getElementById('mainSpecialty');
             const secondarySpecialtySelect = document.getElementById('secondarySpecialty');
             const noContractCheckbox = document.getElementById('noContract');
@@ -286,7 +296,8 @@
             mainSpecialtySelect.innerHTML = '<option value="">Bitte wählen</option>';
             secondarySpecialtySelect.innerHTML = '<option value="">Bitte wählen</option>';
 
-            Object.entries(specialties).forEach(([key, value]) => {
+            // Lade alle verfügbaren Fachgebiete aus der vom Server gesendeten Spezialitätenliste
+            Object.entries(specialties[titleSelect.value === 'Frau' ? 'female' : 'male']).forEach(([key, value]) => {
                 mainSpecialtySelect.innerHTML += `<option value="${key}" ${key === currentMainSpecialty ? 'selected' : ''}>${value}</option>`;
                 secondarySpecialtySelect.innerHTML += `<option value="${key}" ${key === currentSecondarySpecialty ? 'selected' : ''}>${value}</option>`;
             });
@@ -330,6 +341,35 @@
                 }
             });
         }
+
+        // API nachladen
+        let retryCount = 0;
+        const maxRetries = 2;
+        
+        function loadGoogleMapsAPI() {
+            const script = document.createElement('script');
+            // Verwende den vom Server gesendeten API-Schlüssel
+            const apiKey = "<%= googleMapsApiKey %>";
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initAutocomplete&v=weekly`;
+            script.async = true;
+            script.defer = true;
+            
+            script.onerror = function() {
+                console.error('Fehler beim Laden der Google Maps API');
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    console.log(`Versuche Google Maps API erneut zu laden (${retryCount}/${maxRetries})`);
+                    setTimeout(loadGoogleMapsAPI, 1000);
+                } else {
+                    console.error('Maximale Anzahl von Versuchen erreicht');
+                    gm_authFailure();
+                }
+            };
+            
+            document.head.appendChild(script);
+        }
+        
+        loadGoogleMapsAPI();
     </script>
 </body>
 </html> 

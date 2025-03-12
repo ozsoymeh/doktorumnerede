@@ -13,7 +13,7 @@
             <div class="flex justify-between items-center">
                 <div class="flex items-center">
                     <a href="/" class="text-2xl font-bold text-indigo-600">
-                        <%= lang === 'tr' ? 'Doktorum nerede?' : 'Doktorum nerede' %>
+                        <%= lang === 'tr' ? 'Doktorum nerede?' : 'Doktorum nerede?' %>
                     </a>
                 </div>
                 <div class="flex items-center space-x-12">
@@ -31,6 +31,13 @@
         </nav>
     </header>
 
+    <!-- Parallax Image Section -->
+    <div class="relative h-[500px] overflow-hidden">
+        <div class="parallax-container w-full h-full bg-center bg-no-repeat bg-cover" style="background-image: url('/uploads/images/doctors-parallax.jpg');">
+            <div class="absolute inset-0 bg-indigo-900/10"></div>
+        </div>
+    </div>
+
     <!-- Hero Section -->
     <div class="relative isolate">
         <div class="mx-auto max-w-7xl px-6 py-16 sm:py-20 lg:px-8">
@@ -40,7 +47,7 @@
                         Türkçe konuşan doktorları
                         <span class="text-indigo-600 relative">
                             kolayca bulun
-                            <svg class="absolute -bottom-2 w-full" viewBox="0 0 300 20" xmlns="http://www.w3.org/2000/svg">
+                            <svg class="absolute -bottom-2 w-full" style="bottom: -30px;" viewBox="0 0 300 20" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M1 15C50 -5 200 -5 299 15" stroke="#818cf8" stroke-width="4" fill="none"/>
                             </svg>
                         </span>
@@ -48,26 +55,25 @@
                         Türkischsprachige Ärzte
                         <span class="text-indigo-600 relative">
                             einfach finden
-                            <svg class="absolute -bottom-2 w-full" viewBox="0 0 300 20" xmlns="http://www.w3.org/2000/svg">
+                            <svg class="absolute -bottom-2 w-full" style="bottom: -30px;" viewBox="0 0 300 20" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M1 15C50 -5 200 -5 299 15" stroke="#818cf8" stroke-width="4" fill="none"/>
                             </svg>
                         </span>
                     <% } %>
                 </h1>
                 <p class="mt-8 text-xl leading-8 text-gray-600 max-w-2xl mx-auto">
-                    Verbinden Sie sich mit türkischsprachigen
-                    Ärzt:innen in Wien und ganz Österreich
+                    <%= lang === 'tr' ? 'Viyana ve tüm Avusturya\'daki Türkçe konuşan doktorlarla bağlantı kurun' : 'Verbinden Sie sich mit türkischsprachigen Ärzt:innen in Wien und ganz Österreich' %>
                 </p>
             </div>
         </div>
     </div>
 
     <!-- Search Section -->
-    <div id="search" class="bg-gray-50 py-32 sm:py-40">
+    <div id="search" class="bg-gray-50 py-16 sm:py-20">
         <div class="mx-auto max-w-7xl px-6 lg:px-8">
-            <div class="mx-auto max-w-2xl lg:text-center space-y-8 mt-16" style="padding-top: 60px;">
+            <div class="mx-auto max-w-2xl lg:text-center space-y-8" style="padding-top: 60px; margin-top: 0;">
                 <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl text-center">
-                    <%= lang === 'tr' ? 'Size uygun doktoru bulun' : 'Finden Sie den richtigen Arzt' %>
+                    <%= lang === 'tr' ? 'Size uygun doktoru bulun' : 'Finden Sie die passende ärztliche Betreuung' %>
                 </h2>
                 <p class="mt-8 text-xl leading-8 text-gray-600 text-center">
                     <%= lang === 'tr' ? 'Uzmanlık alanı, isim veya konum ile arama yapın' : 'Suchen Sie nach Fachgebiet, Name oder Standort' %>

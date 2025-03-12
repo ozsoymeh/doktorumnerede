@@ -111,25 +111,44 @@
                     </div>
 
                     <div>
-                        <label for="street" class="block text-sm font-medium leading-6 text-gray-900">Straße und Hausnummer *</label>
+                        <label for="address" class="block text-sm font-medium leading-6 text-gray-900">Adresse</label>
                         <div class="mt-2">
-                            <input type="text" id="street" name="street" required
+                            <input type="text" id="address" name="address" placeholder="Beginnen Sie mit der Eingabe Ihrer Adresse..."
+                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">Wählen Sie eine Adresse aus den Vorschlägen für eine genaue Validierung</p>
+                    </div>
+
+                    <div class="hidden">
+                        <label for="street" class="block text-sm font-medium leading-6 text-gray-900">Straße und Hausnummer</label>
+                        <div class="mt-2">
+                            <input type="text" id="street" name="street"
                                 class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                         </div>
                     </div>
 
                     <div>
-                        <label for="zipCode" class="block text-sm font-medium leading-6 text-gray-900">PLZ *</label>
+                        <label for="addressLine2" class="block text-sm font-medium leading-6 text-gray-900">Adresszusatz (optional)</label>
                         <div class="mt-2">
-                            <input type="text" id="zipCode" name="zipCode" required
+                            <input type="text" id="addressLine2" name="addressLine2" 
+                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                                placeholder="z.B. Stiege, Tür, Stockwerk, Gebäude">
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">Zusätzliche Informationen zur Adresse, die nicht von Google Maps erfasst werden</p>
+                    </div>
+
+                    <div class="hidden">
+                        <label for="zipCode" class="block text-sm font-medium leading-6 text-gray-900">PLZ</label>
+                        <div class="mt-2">
+                            <input type="text" id="zipCode" name="zipCode" 
                                 class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                         </div>
                     </div>
 
-                    <div>
-                        <label for="city" class="block text-sm font-medium leading-6 text-gray-900">Stadt *</label>
+                    <div class="hidden">
+                        <label for="city" class="block text-sm font-medium leading-6 text-gray-900">Stadt</label>
                         <div class="mt-2">
-                            <input type="text" id="city" name="city" required
+                            <input type="text" id="city" name="city" 
                                 class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                         </div>
                     </div>
@@ -173,15 +192,203 @@
     </div>
 
     <script>
+        // Variablen aus dem Server
+        const serverSpecialties = <%- JSON.stringify(specialties) %>;
+        
+        // Formular-Validierung
         document.addEventListener('DOMContentLoaded', function() {
+            const titleSelect = document.getElementById('title');
             const mainSpecialtySelect = document.getElementById('mainSpecialty');
             
-            // Fachgebiete initial füllen
-            mainSpecialtySelect.innerHTML = '<option value="">Bitte wählen</option>';
-            <% Object.entries(t('specialties.male')).forEach(([key, value]) => { %>
-                mainSpecialtySelect.innerHTML += `<option value="<%= key %>"><%= value %></option>`;
-            <% }); %>
+            // Befülle das Fachgebiets-Dropdown basierend auf der ausgewählten Anrede
+            function updateSpecialties() {
+                const gender = titleSelect.value === 'Frau' ? 'female' : 'male';
+                
+                // Lösche bestehende Optionen
+                mainSpecialtySelect.innerHTML = '<option value="">Bitte wählen</option>';
+                
+                // Füge alle verfügbaren Fachgebiete hinzu
+                Object.entries(serverSpecialties[gender]).forEach(([key, value]) => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = value;
+                    mainSpecialtySelect.appendChild(option);
+                });
+            }
+            
+            // Initialer Aufruf und Eventlistener
+            if (titleSelect) {
+                updateSpecialties();
+                titleSelect.addEventListener('change', updateSpecialties);
+            }
         });
+
+        // Google Maps Places API für Adressvalidierung
+        function initAutocomplete() {
+            try {
+                // Initialisiere den Autocomplete-Service mit verbesserter Konfiguration
+                const autocompleteOptions = {
+                    componentRestrictions: { country: ['at'] }, // Einschränkung auf Österreich
+                    fields: ['address_component', 'geometry', 'name'],
+                    types: ['address'],
+                    minLength: 3 // Minimum 3 Zeichen
+                };
+                
+                const autocomplete = new google.maps.places.Autocomplete(
+                    document.getElementById('address'),
+                    autocompleteOptions
+                );
+                
+                // Listener für die Adressauswahl
+                autocomplete.addListener('place_changed', function() {
+                    try {
+                        const place = autocomplete.getPlace();
+                        
+                        if (!place || !place.geometry) {
+                            // Benutzer hat keine Adresse aus der Vorschlagsliste ausgewählt
+                            document.getElementById('address').classList.add('border-red-500');
+                            return;
+                        }
+                        
+                        document.getElementById('address').classList.remove('border-red-500');
+                        
+                        // Extrahiere Adresskomponenten
+                        let street = '';
+                        let streetNumber = '';
+                        let zipCode = '';
+                        let city = '';
+                        
+                        for (const component of place.address_components || []) {
+                            const componentType = component.types[0];
+
+                            switch (componentType) {
+                                case 'route':
+                                    street = component.long_name;
+                                    break;
+                                case 'street_number':
+                                    streetNumber = component.long_name;
+                                    break;
+                                case 'postal_code':
+                                    zipCode = component.long_name;
+                                    break;
+                                case 'locality':
+                                    city = component.long_name;
+                                    break;
+                            }
+                        }
+                        
+                        // Befülle die verborgenen Felder
+                        document.getElementById('street').value = street + (streetNumber ? ' ' + streetNumber : '');
+                        document.getElementById('zipCode').value = zipCode;
+                        document.getElementById('city').value = city;
+                        
+                        // Validiere, ob alle erforderlichen Informationen vorhanden sind
+                        if (!street || !zipCode || !city) {
+                            console.warn('Unvollständige Adressdaten:', place);
+                            alert('Bitte wählen Sie eine vollständige Adresse mit Straße, PLZ und Stadt');
+                        }
+                    } catch (error) {
+                        console.error('Fehler bei der Verarbeitung der Adresse:', error);
+                        // Fallback: Formular kann trotzdem abgesendet werden
+                        document.getElementById('street').value = document.getElementById('address').value;
+                    }
+                });
+                
+                // Eingabefeld-Event für manuelle Eingabe ohne Auswahl
+                document.getElementById('address').addEventListener('blur', function() {
+                    setTimeout(() => {
+                        const addressField = document.getElementById('address');
+                        const streetField = document.getElementById('street');
+                        // Wenn keine Straße gesetzt wurde, aber eine Adresse eingegeben wurde
+                        if (!streetField.value && addressField.value.trim().length > 0) {
+                            // Manuell eingegebene Adresse als Straße übernehmen (Fallback)
+                            streetField.value = addressField.value;
+                            console.log('Manuelle Adresseingabe übernommen:', addressField.value);
+                        }
+                    }, 300);
+                });
+                
+                console.log('Google Maps Autocomplete erfolgreich initialisiert');
+            } catch (error) {
+                console.error('Fehler bei der Initialisierung von Google Maps Autocomplete:', error);
+                // Fallback: Adressfeld als normales Eingabefeld verwenden
+                document.getElementById('address').addEventListener('blur', function() {
+                    document.getElementById('street').value = document.getElementById('address').value;
+                });
+            }
+        }
+
+        // Alternative Initialisierung falls Google Maps API nicht lädt
+        window.gm_authFailure = function() {
+            console.error('Google Maps Authentifizierungsfehler');
+            document.getElementById('address').placeholder = 'Bitte geben Sie Ihre vollständige Adresse ein';
+            document.getElementById('address').addEventListener('blur', function() {
+                const parts = this.value.split(',');
+                if (parts.length > 1) {
+                    document.getElementById('street').value = parts[0].trim();
+                    const cityParts = parts[1].trim().split(' ');
+                    if (cityParts.length > 1) {
+                        document.getElementById('zipCode').value = cityParts[0].trim();
+                        document.getElementById('city').value = cityParts.slice(1).join(' ').trim();
+                    } else {
+                        document.getElementById('city').value = cityParts[0].trim();
+                    }
+                } else {
+                    document.getElementById('street').value = this.value;
+                }
+            });
+        };
+
+        // Falls die API nach 5 Sekunden nicht geladen ist, Fallback aktivieren
+        setTimeout(function() {
+            if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+                gm_authFailure();
+            }
+        }, 5000);
+
+        // Vor dem Absenden des Formulars: Adressvalidierung mit Fallback
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const street = document.getElementById('street').value;
+            const zipCode = document.getElementById('zipCode').value;
+            const city = document.getElementById('city').value;
+            const addressField = document.getElementById('address');
+            
+            // Wenn keine Straße, aber Adresse eingegeben wurde, Adresse als Straße verwenden
+            if (!street && addressField.value.trim()) {
+                document.getElementById('street').value = addressField.value;
+            }
+            
+            // Adresse ist jetzt kein Pflichtfeld mehr, also muss das Formular immer gesendet werden können
+        });
+    </script>
+    
+    <!-- Google Maps Places API laden mit Retry-Option und Timeout -->
+    <script>
+        let retryCount = 0;
+        const maxRetries = 2;
+        
+        function loadGoogleMapsAPI() {
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBdLX-Lh95i1L-2-ed-FLzQC0_m8pE&libraries=places&callback=initAutocomplete&v=weekly`;
+            script.async = true;
+            script.defer = true;
+            
+            script.onerror = function() {
+                console.error('Fehler beim Laden der Google Maps API');
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    console.log(`Versuche Google Maps API erneut zu laden (${retryCount}/${maxRetries})`);
+                    setTimeout(loadGoogleMapsAPI, 1000);
+                } else {
+                    console.error('Maximale Anzahl von Versuchen erreicht');
+                    gm_authFailure();
+                }
+            };
+            
+            document.head.appendChild(script);
+        }
+        
+        loadGoogleMapsAPI();
     </script>
 </body>
 </html> 

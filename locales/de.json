@@ -5,7 +5,7 @@
         "backToSearch": "Zurück zur Suche"
     },
     "hero": {
-        "title": "Finden Sie den richtigen Arzt für Sie",
+        "title": "Finden Sie die passende ärztliche Betreuung",
         "subtitle": "Verbinden Sie sich mit türkischsprachigen Ärzt:innen in Wien und ganz Österreich"
     },
     "intro": {
@@ -31,7 +31,9 @@
         "website": "Webseite",
         "insurance": "Kassenverträge",
         "privateOnly": "Nur Wahlarzt",
-        "additionalInfo": "Zusätzliche Informationen"
+        "additionalInfo": "Zusätzliche Informationen",
+        "location": "Standort",
+        "clickMapForDirections": "Klicken Sie auf die Karte, um die Route zu planen"
     },
     "specialties": {
         "male": {
