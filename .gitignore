@@ -6,7 +6,48 @@ node_modules/.package-lock.json
 node_modules/
 public/uploads/
 public/css/output.css
+
+# Environment files
 .env
 .env.local
 .env.development
 .env.production
+.env.*
+
+# Sensitive data files
+data/doctors.json
+data/*.json
+data/*.backup*
+*.backup
+*.backup-*
+*.backup[0-9]*
+
+# Database and session files
+*.sql
+*.db
+sessions.sql
+create_sessions.sql
+db/
+
+# Log files
+*.log
+logs/
+server.out
+
+# Backup directories
+backups/
+temp_restore/
+
+# Sensitive scripts and configs
+*.sh
+scripts/reset-admin-password.js
+scripts/setup-admin.js
+scripts/test-admin-login.js
+ecosystem.config.js
+
+# Temporary and development files
+*.md
+!README.md
+!DEPLOYMENT.md
+cookies.txt
+phpinfo.php
