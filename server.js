@@ -59,9 +59,9 @@ const fileFilter = (req, file, cb) => {
         }
         
         // Überprüfe Dateigröße
-        const maxSize = 1024 * 1024; // 1MB für alle Bilder
+        const maxSize = 4 * 1024 * 1024; // 4MB für alle Bilder
         if (parseInt(req.headers['content-length']) > maxSize) {
-            return cb(new Error('Die Dateigröße darf maximal 1MB betragen!'), false);
+            return cb(new Error('Die Dateigröße darf maximal 4MB betragen!'), false);
         }
     }
     cb(null, true);
@@ -71,7 +71,7 @@ const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 1024 * 1024 // 1MB in Bytes
+        fileSize: 4 * 1024 * 1024 // 4MB in Bytes
     }
 });
 
@@ -159,7 +159,7 @@ const sessionOptions = {
     resave: false,
     saveUninitialized: true,
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // Nur in Produktion auf true
+        secure: false, // Set to false for HTTP testing
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000 // 24 Stunden
     }
@@ -203,6 +203,23 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use(session(sessionOptions));
+
+// Request-Debug-Logger
+app.use((req, res, next) => {
+    const startHrTime = process.hrtime.bigint();
+    const requestId = Math.random().toString(36).slice(2, 10);
+    console.log(`[REQ ${requestId}] ${req.method} ${req.originalUrl} len=${req.headers['content-length'] || 0}`);
+
+    req.on('aborted', () => {
+        console.warn(`[REQ ${requestId}] Aborted by client`);
+    });
+
+    res.on('finish', () => {
+        const durMs = Number(process.hrtime.bigint() - startHrTime) / 1e6;
+        console.log(`[RES ${requestId}] ${res.statusCode} in ${durMs.toFixed(1)}ms`);
+    });
+    next();
+});
 
 // Middleware für Übersetzungen
 app.use((req, res, next) => {
@@ -279,6 +296,79 @@ function formatNameForUrl(firstName, lastName) {
         .replace(/[^a-z0-9-]/g, '-')
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
+}
+
+/**
+ * Automatically detects gender based on Turkish and German first names
+ * Returns 'Herr', 'Frau', or null if uncertain
+ */
+function detectGenderFromName(firstName) {
+    if (!firstName) return null;
+    
+    const name = firstName.toLowerCase().trim();
+    
+    // Turkish female names
+    const turkishFemaleNames = [
+        'ayşe', 'fatma', 'emine', 'hatice', 'zeynep', 'elif', 'meryem', 'zehra', 'sibel', 'özlem',
+        'aygül', 'aynur', 'ayşegül', 'gül', 'gülay', 'gülsüm', 'hülya', 'melek', 'nur', 'nurcan',
+        'pınar', 'pinar', 'serpil', 'sultan', 'şule', 'tuğba', 'yasemin', 'yeliz', 'zeliha', 'deniz', 'eda',
+        'emel', 'esra', 'feride', 'gamze', 'hande', 'ilknur', 'jale', 'kübra', 'leyla', 'meltem',
+        'necla', 'özge', 'pelin', 'selin', 'tuba', 'ümmü', 'vildan', 'yıldız', 'zuhal', 'aslı',
+        'berna', 'cemre', 'dilek', 'ecem', 'figen', 'gizem', 'hacer', 'ipek', 'jülide', 'kadriye',
+        'lale', 'müge', 'nihan', 'özlem', 'pembe', 'seda', 'tülay', 'ünal', 'vildan', 'yaprak',
+        'canan', 'derya', 'sema', 'sabiha', 'sevgi', 'medine', 'melisa', 'neslihan'
+    ];
+    
+    // Turkish male names
+    const turkishMaleNames = [
+        'mehmet', 'mustafa', 'ahmet', 'ali', 'hüseyin', 'hasan', 'ibrahim', 'ismail', 'ömer', 'osman',
+        'batuhan', 'berk', 'can', 'cem', 'deniz', 'emre', 'erhan', 'furkan', 'gökhan', 'halil',
+        'ibrahim', 'kadir', 'kerem', 'murat', 'onur', 'özkan', 'serkan', 'taner', 'umut', 'yasin',
+        'yusuf', 'zafer', 'abdullah', 'adnan', 'burak', 'cihan', 'doğan', 'emir', 'ferhat', 'gürkan',
+        'hakan', 'ilker', 'jale', 'kamil', 'levent', 'mert', 'nihat', 'orhan', 'pınar', 'ramazan',
+        'selim', 'tayfun', 'ufuk', 'volkan', 'yavuz', 'zeki', 'arif', 'bülent', 'cengiz', 'dursun',
+        'engin', 'fahri', 'güven', 'hüseyin', 'ismet', 'jülide', 'kürşat', 'leyla', 'mücahit', 'nuri'
+    ];
+    
+    // German female names
+    const germanFemaleNames = [
+        'anna', 'maria', 'petra', 'monika', 'elke', 'sabine', 'andrea', 'barbara', 'christina', 'daniela',
+        'elena', 'franziska', 'gabriele', 'heike', 'ingrid', 'julia', 'katharina', 'lisa', 'martina', 'nicole',
+        'petra', 'regina', 'sandra', 'tina', 'ulrike', 'veronika', 'waltraud', 'yvonne', 'zoe', 'alexandra',
+        'britta', 'caroline', 'diana', 'eva', 'friederike', 'gudrun', 'helga', 'iris', 'johanna', 'kristin',
+        'lena', 'margarete', 'nina', 'olga', 'patricia', 'renate', 'sylvia', 'theresa', 'ursula', 'viktoria'
+    ];
+    
+    // German male names
+    const germanMaleNames = [
+        'hans', 'peter', 'wolfgang', 'klaus', 'jürgen', 'dieter', 'horst', 'gerhard', 'helmut', 'werner',
+        'alexander', 'bernd', 'christian', 'dirk', 'erik', 'florian', 'günther', 'heinz', 'ingo', 'jens',
+        'karl', 'lars', 'michael', 'norbert', 'oliver', 'ralf', 'stefan', 'thomas', 'uwe', 'volker',
+        'andreas', 'benedikt', 'carl', 'dennis', 'erwin', 'frank', 'georg', 'herbert', 'ingo', 'jörg',
+        'kurt', 'ludwig', 'manfred', 'nicolas', 'otto', 'paul', 'rainer', 'sebastian', 'torsten', 'ulrich'
+    ];
+    
+    // Check Turkish names first (more common in this context)
+    if (turkishFemaleNames.includes(name)) return 'Frau';
+    if (turkishMaleNames.includes(name)) return 'Herr';
+    
+    // Check German names
+    if (germanFemaleNames.includes(name)) return 'Frau';
+    if (germanMaleNames.includes(name)) return 'Herr';
+    
+    // Check for common Turkish name endings
+    if (name.endsWith('e') || name.endsWith('a') || name.endsWith('i') || name.endsWith('ü') || name.endsWith('ö')) {
+        // These endings are more common in female Turkish names
+        return 'Frau';
+    }
+    
+    // Check for common Turkish male name endings
+    if (name.endsWith('t') || name.endsWith('n') || name.endsWith('r') || name.endsWith('k') || name.endsWith('m')) {
+        // These endings are more common in male Turkish names
+        return 'Herr';
+    }
+    
+    return null; // Uncertain
 }
 
 async function processExcelFile() {
@@ -404,13 +494,15 @@ app.get('/', (req, res) => {
         );
     }
 
+    const lang = (req.query && req.query.lang) || (req.session && req.session.lang) || 'de';
     res.render('index', {
         title: 'Doktorum nerede - Avusturya',
         doctors: filteredDoctors,
         cities,
         zipCodes,
         formatNameForUrl,
-        lang: (req.query && req.query.lang) || (req.session && req.session.lang) || 'de',
+        lang,
+        specialties: translations[lang]?.specialties || translations.de.specialties,
         t: res.locals.t || (key => key)
     });
 });
@@ -453,6 +545,7 @@ app.get('/doctor/:nameSlug', (req, res) => {
             doctor,
             lang,
             t, // Eine Funktion, keine Objekt
+            specialties: translations[lang]?.specialties || translations.de.specialties,
             googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '' 
         });
     } catch (error) {
@@ -460,6 +553,7 @@ app.get('/doctor/:nameSlug', (req, res) => {
         res.status(500).send('Ein Fehler ist aufgetreten beim Laden des Arztprofils.');
     }
 });
+
 
 // Login Routes
 app.get('/login', (req, res) => {
@@ -469,7 +563,7 @@ app.get('/login', (req, res) => {
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
     const doctors = getDoctors();
-    const doctor = doctors.find(d => d.email === email);
+    const doctor = doctors.find(d => d.email.toLowerCase() === email.toLowerCase());
 
     if (doctor && await bcrypt.compare(password, doctor.password)) {
         req.session.userId = doctor.email;
@@ -511,7 +605,7 @@ app.get('/profile', requireAuth, (req, res) => {
 
     res.render('profile', { 
         doctor: doctor,
-        specialties: specialties,
+        specialties: translations.de.specialties,
         message: req.session.message,
         googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || ''
     });
@@ -547,6 +641,15 @@ app.post('/profile/edit', requireAuth, upload.fields([
     { name: 'galleryPhotos', maxCount: 2 }
 ]), async (req, res) => {
     try {
+        console.log('Profile edit request received:', {
+            email: req.session.userId,
+            isApproved: !!getDoctors().find(d => d.email === (req.session.userId || req.session.doctorId))?.isApproved,
+            bodyKeys: Object.keys(req.body || {}),
+            hasPhoto: !!(req.files && req.files.photo && req.files.photo.length),
+            hasGallery: !!(req.files && req.files.galleryPhotos && req.files.galleryPhotos.length),
+            fullBody: JSON.stringify(req.body, null, 2)
+        });
+        
         const doctors = getDoctors();
         const doctorIndex = doctors.findIndex(d => d.email === req.session.userId || req.session.doctorId);
         
@@ -554,35 +657,119 @@ app.post('/profile/edit', requireAuth, upload.fields([
             return res.redirect('/login');
         }
 
-        // Überprüfe, ob der Arzt bestätigt ist
+        // Arzt kann sein Profil auch vor Freigabe bearbeiten; Hinweis anzeigen, aber nicht blockieren
         if (!doctors[doctorIndex].isApproved) {
             req.session.message = {
-                type: 'error',
-                text: 'Ihr Profil muss erst von einem Administrator freigegeben werden.'
+                type: 'info',
+                text: 'Ihr Profil ist noch nicht freigegeben. Änderungen werden gespeichert, sind aber noch nicht öffentlich.'
             };
-            return res.redirect('/profile');
         }
+
+        // Vereinheitliche Insurance-Eingaben von beiden Formularvarianten
+        const incomingInsuranceType = req.body.insuranceType;
+        const noContractRaw = req.body.noContract;
+        
+        // With multer (multipart/form-data), nested objects like insurance[oegk] might not parse correctly
+        // Check all possible formats - prioritize flat keys since we're using hidden inputs with flat names
+        let oegkRaw = req.body.insurance_oegk;
+        let svsRaw = req.body.insurance_svs;
+        let bvaebRaw = req.body.insurance_bvaeb;
+        let kfaRaw = req.body.insurance_kfa;
+        
+        // Fallback to nested object format (if form uses it)
+        if (oegkRaw === undefined && req.body.insurance) {
+            oegkRaw = req.body.insurance.oegk;
+            svsRaw = req.body.insurance.svs;
+            bvaebRaw = req.body.insurance.bvaeb;
+            kfaRaw = req.body.insurance.kfa;
+        }
+        
+        // Final fallback to bracket notation (if Express parses it as string key)
+        if (oegkRaw === undefined) oegkRaw = req.body["insurance[oegk]"];
+        if (svsRaw === undefined) svsRaw = req.body["insurance[svs]"];
+        if (bvaebRaw === undefined) bvaebRaw = req.body["insurance[bvaeb]"];
+        if (kfaRaw === undefined) kfaRaw = req.body["insurance[kfa]"];
+
+        // Normalisiere Werte (Checkboxen senden 'on' oder definierte 'true')
+        const normalizeBool = (val) => val === true || val === 'true' || val === 'on' || val === '1';
+
+        // Bestimme InsuranceType, falls nicht explizit gesetzt
+        const computedNoContract = normalizeBool(noContractRaw) || incomingInsuranceType === 'noContract';
+        const hasAnyInsurance = normalizeBool(oegkRaw) || normalizeBool(svsRaw) || normalizeBool(bvaebRaw) || normalizeBool(kfaRaw);
+        const computedInsuranceType = computedNoContract ? 'noContract' : (incomingInsuranceType || (hasAnyInsurance ? 'hasContract' : 'hasContract'));
+
+        // Debug logging AFTER computing values
+        console.log('Insurance form data:', {
+            insuranceType: incomingInsuranceType,
+            computedInsuranceType: computedInsuranceType,
+            insurance_from_body: req.body.insurance,
+            insurance_oegk_from_body: req.body.insurance_oegk,
+            oegkRaw,
+            svsRaw,
+            bvaebRaw,
+            kfaRaw,
+            normalized_oegk: normalizeBool(oegkRaw),
+            normalized_svs: normalizeBool(svsRaw),
+            normalized_bvaeb: normalizeBool(bvaebRaw),
+            normalized_kfa: normalizeBool(kfaRaw),
+            allBodyKeys: Object.keys(req.body).filter(k => k.includes('insurance'))
+        });
+
+        // Fallback: parse combined address if single fields are missing
+        if ((!req.body.street || !req.body.zipCode || !req.body.city) && req.body.address) {
+            try {
+                const addressRaw = String(req.body.address).trim();
+                const parts = addressRaw.split(',');
+                if (parts.length > 1) {
+                    const streetParsed = parts[0].trim();
+                    const rest = parts[1].trim().split(/\s+/);
+                    const zipParsed = rest[0] || '';
+                    const cityParsed = rest.slice(1).join(' ').trim();
+                    req.body.street = req.body.street || streetParsed;
+                    req.body.zipCode = req.body.zipCode || zipParsed;
+                    req.body.city = req.body.city || cityParsed;
+                } else {
+                    req.body.street = req.body.street || addressRaw;
+                }
+            } catch (e) {
+                console.warn('Adress-Fallback-Parsing fehlgeschlagen:', e);
+            }
+        }
+
+        // Build insurance object FIRST
+        const insuranceObject = {
+            noContract: computedInsuranceType === 'noContract',
+            oegk: computedInsuranceType === 'hasContract' ? normalizeBool(oegkRaw) : false,
+            svs: computedInsuranceType === 'hasContract' ? normalizeBool(svsRaw) : false,
+            bvaeb: computedInsuranceType === 'hasContract' ? normalizeBool(bvaebRaw) : false,
+            kfa: computedInsuranceType === 'hasContract' ? normalizeBool(kfaRaw) : false
+        };
+        
+        console.log('Computed insurance object:', insuranceObject);
+
+        // Remove insurance-related fields from req.body to avoid conflicts
+        const { insurance, insurance_oegk, insurance_svs, insurance_bvaeb, insurance_kfa, ...cleanBody } = req.body;
 
         const updatedDoctor = {
             ...doctors[doctorIndex],
-            ...req.body,
+            ...cleanBody,
             street: req.body.street || doctors[doctorIndex].street || '',
             zipCode: req.body.zipCode || doctors[doctorIndex].zipCode || '',
             city: req.body.city || doctors[doctorIndex].city || '',
             addressLine2: req.body.addressLine2 || doctors[doctorIndex].addressLine2 || '',
-            insurance: {
-                noContract: req.body.noContract === "true",
-                oegk: req.body.insurance_oegk === "true" || req.body["insurance[oegk]"] === "true",
-                svs: req.body.insurance_svs === "true" || req.body["insurance[svs]"] === "true",
-                bvaeb: req.body.insurance_bvaeb === "true" || req.body["insurance[bvaeb]"] === "true",
-                kfa: req.body.insurance_kfa === "true" || req.body["insurance[kfa]"] === "true"
-            },
-            insuranceType: req.body.insuranceType || 'hasContract',
-            showEmail: req.body.showEmail === 'true'
+            insurance: insuranceObject,  // Use our computed object
+            insuranceType: computedInsuranceType,
+            showEmail: normalizeBool(req.body.showEmail)
         };
 
-        // Profilfoto verarbeiten
-        if (req.files.photo && req.files.photo[0]) {
+        // Map mainSpecialty to specialties array for public display
+        if (req.body.mainSpecialty) {
+            updatedDoctor.mainSpecialty = req.body.mainSpecialty;
+            updatedDoctor.specialties = [req.body.mainSpecialty];
+        }
+
+        // Profilfoto verarbeiten (nur wenn vorhanden)
+        if (req.files && req.files.photo && req.files.photo[0]) {
             const photo = req.files.photo[0];
             const photoFileName = `profile-${Date.now()}.jpg`;
             
@@ -597,7 +784,7 @@ app.post('/profile/edit', requireAuth, upload.fields([
             }
 
             await sharp(photo.path)
-                .resize(400, 400, { fit: 'cover' })
+                .resize(1200, 1200, { fit: 'cover' })
                 .jpeg({ quality: 90 })
                 .toFile(path.join(__dirname, 'public', 'uploads', photoFileName));
             
@@ -607,40 +794,107 @@ app.post('/profile/edit', requireAuth, upload.fields([
             updatedDoctor.photo = photoFileName;
         }
 
-        // Galeriefotos verarbeiten
-        if (req.files.galleryPhotos) {
-            const newGalleryPhotos = [];
-            for (const photo of req.files.galleryPhotos) {
-                const photoFileName = `gallery-${Date.now()}-${newGalleryPhotos.length + 1}.jpg`;
+        // Galeriefotos verarbeiten (nur wenn vorhanden)
+        if (req.files && req.files.galleryPhotos) {
+            const existingPhotos = doctors[doctorIndex].galleryPhotos || [];
+            const remainingSlots = 3 - existingPhotos.length;
+            
+            if (remainingSlots > 0) {
+                const newGalleryPhotos = [];
+                const photosToProcess = req.files.galleryPhotos.slice(0, remainingSlots); // Limit to available slots
                 
-                await sharp(photo.path)
-                    .resize(800, 600, { fit: 'cover' })
-                    .jpeg({ quality: 90 })
-                    .toFile(path.join(__dirname, 'public', 'uploads', photoFileName));
-                
-                // Temporäre Datei löschen
-                await fsPromises.unlink(photo.path);
-                
-                newGalleryPhotos.push(photoFileName);
-            }
+                for (const photo of photosToProcess) {
+                    const photoFileName = `gallery-${Date.now()}-${Math.round(Math.random() * 1E9)}.jpg`;
+                    
+                    await sharp(photo.path)
+                        .resize(800, 600, { fit: 'cover' })
+                        .jpeg({ quality: 90 })
+                        .toFile(path.join(__dirname, 'public', 'uploads', photoFileName));
+                    
+                    // Temporäre Datei löschen
+                    await fsPromises.unlink(photo.path);
+                    
+                    newGalleryPhotos.push(photoFileName);
+                }
 
-            // Alte Fotos löschen
-            if (doctors[doctorIndex].galleryPhotos) {
-                for (const oldPhoto of doctors[doctorIndex].galleryPhotos) {
-                    const oldPhotoPath = path.join(__dirname, 'public', 'uploads', oldPhoto);
-                    try {
-                        await fsPromises.unlink(oldPhotoPath);
-                    } catch (error) {
-                        console.error('Fehler beim Löschen des alten Galeriefotos:', error);
+                // Bereinige nicht verarbeitete Dateien (falls mehr als remainingSlots hochgeladen wurden)
+                if (req.files.galleryPhotos.length > remainingSlots) {
+                    for (let i = remainingSlots; i < req.files.galleryPhotos.length; i++) {
+                        try {
+                            await fsPromises.unlink(req.files.galleryPhotos[i].path);
+                        } catch (error) {
+                            console.error('Fehler beim Löschen der nicht verarbeiteten Datei:', error);
+                        }
+                    }
+                    if (!req.session.message) {
+                        req.session.message = {
+                            type: 'info',
+                            text: `${photosToProcess.length} Foto(s) hinzugefügt. Sie haben bereits 3 Ordinationsfotos (Maximum).`
+                        };
                     }
                 }
-            }
 
-            updatedDoctor.galleryPhotos = newGalleryPhotos;
+                // Neue Fotos zu bestehenden hinzufügen (nicht ersetzen!)
+                updatedDoctor.galleryPhotos = [...existingPhotos, ...newGalleryPhotos];
+            } else {
+                // Wenn bereits 3 Fotos vorhanden, alle temporären Dateien löschen
+                for (const photo of req.files.galleryPhotos) {
+                    try {
+                        await fsPromises.unlink(photo.path);
+                    } catch (error) {
+                        console.error('Fehler beim Löschen der temporären Datei:', error);
+                    }
+                }
+                req.session.message = {
+                    type: 'info',
+                    text: 'Sie können maximal 3 Ordinationsfotos haben. Bitte löschen Sie zuerst ein Foto, um ein neues hochzuladen.'
+                };
+            }
+        }
+
+        // Adresse zusammenführen, wenn Felder vorhanden
+        if (updatedDoctor.street && updatedDoctor.zipCode && updatedDoctor.city) {
+            updatedDoctor.address = `${updatedDoctor.street}, ${updatedDoctor.zipCode} ${updatedDoctor.city}`;
+        }
+
+        // Optional: Passwort ändern, wenn Felder gesetzt
+        const currentPassword = (req.body.currentPassword || '').trim();
+        const newPassword = (req.body.newPassword || '').trim();
+        const confirmPassword = (req.body.confirmPassword || '').trim();
+
+        if (currentPassword || newPassword || confirmPassword) {
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                req.session.message = { type: 'error', text: 'Bitte aktuelles Passwort und neues Passwort zweimal eingeben.' };
+                return res.redirect('/profile');
+            }
+            if (newPassword !== confirmPassword) {
+                req.session.message = { type: 'error', text: 'Die neuen Passwörter stimmen nicht überein.' };
+                return res.redirect('/profile');
+            }
+            const isValid = await bcrypt.compare(currentPassword, doctors[doctorIndex].password || '');
+            if (!isValid) {
+                req.session.message = { type: 'error', text: 'Aktuelles Passwort ist falsch.' };
+                return res.redirect('/profile');
+            }
+            updatedDoctor.password = await bcrypt.hash(newPassword, 10);
         }
 
         doctors[doctorIndex] = updatedDoctor;
         saveDoctors(doctors);
+
+        console.log('Profile edit saved for:', doctors[doctorIndex].email, {
+            street: updatedDoctor.street,
+            zipCode: updatedDoctor.zipCode,
+            city: updatedDoctor.city,
+            insurance: updatedDoctor.insurance,
+            insuranceType: updatedDoctor.insuranceType
+        });
+        
+        // Verify the saved insurance values
+        const savedDoctor = getDoctors().find(d => d.email === req.session.userId || req.session.doctorId);
+        if (savedDoctor) {
+            console.log('VERIFICATION - Saved insurance values:', savedDoctor.insurance);
+        }
 
         req.session.message = {
             type: 'success',
@@ -661,9 +915,67 @@ app.post('/profile/edit', requireAuth, upload.fields([
     }
 });
 
+// Delete profile photo
+app.post('/profile/photo/delete', requireAuth, (req, res) => {
+    try {
+        const doctors = getDoctors();
+        const doctorIndex = doctors.findIndex(d => d.email === req.session.userId || req.session.doctorId);
+        
+        if (doctorIndex === -1) {
+            return res.redirect('/login');
+        }
+
+        const doctor = doctors[doctorIndex];
+        if (doctor.photo) {
+            const photoPath = path.join(__dirname, 'public', 'uploads', doctor.photo);
+            try {
+                if (fs.existsSync(photoPath)) {
+                    fs.unlinkSync(photoPath);
+                }
+            } catch (error) {
+                console.error('Fehler beim Löschen des Profilfotos:', error);
+            }
+        }
+        
+        doctors[doctorIndex].photo = '';
+        saveDoctors(doctors);
+
+        req.session.message = {
+            type: 'success',
+            text: 'Profilfoto wurde erfolgreich gelöscht.'
+        };
+
+        res.redirect('/profile');
+    } catch (error) {
+        console.error('Fehler beim Löschen des Profilfotos:', error);
+        req.session.message = {
+            type: 'error',
+            text: 'Beim Löschen des Profilfotos ist ein Fehler aufgetreten.'
+        };
+        res.redirect('/profile');
+    }
+});
+
+// Zentrale Error-Handler Middleware (Debug)
+// Muss nach den Routen registriert sein
+app.use((err, req, res, next) => {
+    try {
+        console.error('Unhandled error:', err);
+        if (res.headersSent) return next(err);
+        res.status(500).send('Interner Serverfehler');
+    } catch (e) {
+        try { res.status(500).end(); } catch (_) {}
+    }
+});
+
 app.post('/upload-photo', requireAuth, upload.single('photo'), async (req, res) => {
     try {
         if (!req.file) {
+            const acceptsHtml = (req.headers['accept'] || '').includes('text/html');
+            if (acceptsHtml) {
+                req.session.message = { type: 'error', text: 'Bitte wählen Sie ein Bild zum Hochladen aus.' };
+                return res.redirect('/profile');
+            }
             return res.status(400).json({ success: false, message: 'Bitte wählen Sie ein Bild zum Hochladen aus.' });
         }
 
@@ -713,7 +1025,7 @@ app.post('/upload-photo', requireAuth, upload.single('photo'), async (req, res) 
 
         // Bild verarbeiten und speichern
         await sharp(req.file.path)
-            .resize({ width: 500, height: 500, fit: 'cover' })
+            .resize({ width: 1200, height: 1200, fit: 'cover' })
             .jpeg({ quality: 90 })
             .toFile(fullPhotoPath);
 
@@ -724,12 +1036,22 @@ app.post('/upload-photo', requireAuth, upload.single('photo'), async (req, res) 
         doctors[index].photo = `${doctors[index].doctorId}/${photoFileName}`;
         saveDoctors(doctors);
 
+        const acceptsHtml = (req.headers['accept'] || '').includes('text/html');
+        if (acceptsHtml) {
+            req.session.message = { type: 'success', text: 'Profilfoto erfolgreich hochgeladen.' };
+            return res.redirect('/profile');
+        }
         res.json({ success: true, photoUrl: `/uploads/${doctors[index].doctorId}/${photoFileName}` });
     } catch (error) {
         console.error('Fehler beim Hochladen des Fotos:', error);
         // Versuchen die temporäre Datei zu löschen im Fehlerfall
         if (req.file && req.file.path && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
+        }
+        const acceptsHtml = (req.headers['accept'] || '').includes('text/html');
+        if (acceptsHtml) {
+            req.session.message = { type: 'error', text: 'Fehler beim Hochladen des Fotos' };
+            return res.redirect('/profile');
         }
         res.status(500).json({ success: false, message: 'Fehler beim Hochladen des Fotos' });
     }
@@ -877,7 +1199,8 @@ function requireAdmin(req, res, next) {
 // Admin Routes
 app.get('/admin', requireAdmin, (req, res) => {
     const doctors = getDoctors();
-    res.render('admin', { doctors });
+    const success = req.query.success || null;
+    res.render('admin', { doctors, success });
 });
 
 app.post('/admin/approve/:email', requireAdmin, (req, res) => {
@@ -903,6 +1226,214 @@ app.post('/admin/disapprove/:email', requireAdmin, (req, res) => {
         res.json({ success: true });
     } else {
         res.status(404).json({ success: false, message: 'Arzt nicht gefunden' });
+    }
+});
+
+// Admin route to edit any doctor's profile
+app.get('/admin/edit/:email', requireAdmin, (req, res) => {
+    const doctors = getDoctors();
+    const doctor = doctors.find(d => d.email === req.params.email);
+    
+    if (!doctor) {
+        return res.status(404).send('Arzt nicht gefunden');
+    }
+    
+    res.render('admin-edit-profile', { 
+        doctor, 
+        specialties: translations.de.specialties,
+        isAdminEdit: true,
+        googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || ''
+    });
+});
+
+// Admin route to save doctor profile edits
+app.post('/admin/edit/:email', requireAdmin, upload.fields([
+    { name: 'photo', maxCount: 1 },
+    { name: 'galleryPhotos', maxCount: 10 }
+]), async (req, res) => {
+    try {
+        const doctors = getDoctors();
+        const doctorIndex = doctors.findIndex(d => d.email === req.params.email);
+        
+        if (doctorIndex === -1) {
+            return res.status(404).send('Arzt nicht gefunden');
+        }
+
+        // Auto-detect title if not provided
+        let title = req.body.title;
+        if (!title && req.body.firstName) {
+            const detectedTitle = detectGenderFromName(req.body.firstName);
+            if (detectedTitle) {
+                title = detectedTitle;
+                console.log(`Auto-detected title "${title}" for ${req.body.firstName}`);
+            }
+        }
+
+        // Remove password from req.body to handle it separately
+        const { password, ...bodyWithoutPassword } = req.body;
+        
+        // Normalize boolean-like values
+        const normalizeBool = (val) => val === true || val === 'true' || val === 'on' || val === '1';
+
+        // Parse insurance values (same logic as profile edit)
+        const insuranceType = req.body.insuranceType || 'hasContract';
+        
+        // With multer (multipart/form-data), use flat keys first
+        let oegkRaw = req.body.insurance_oegk;
+        let svsRaw = req.body.insurance_svs;
+        let bvaebRaw = req.body.insurance_bvaeb;
+        let kfaRaw = req.body.insurance_kfa;
+        
+        // Fallback to nested object format
+        if (oegkRaw === undefined && req.body.insurance) {
+            oegkRaw = req.body.insurance.oegk;
+            svsRaw = req.body.insurance.svs;
+            bvaebRaw = req.body.insurance.bvaeb;
+            kfaRaw = req.body.insurance.kfa;
+        }
+        
+        // Final fallback to bracket notation
+        if (oegkRaw === undefined) oegkRaw = req.body["insurance[oegk]"];
+        if (svsRaw === undefined) svsRaw = req.body["insurance[svs]"];
+        if (bvaebRaw === undefined) bvaebRaw = req.body["insurance[bvaeb]"];
+        if (kfaRaw === undefined) kfaRaw = req.body["insurance[kfa]"];
+
+        console.log('Admin insurance form data:', {
+            insuranceType,
+            insurance: req.body.insurance,
+            oegkRaw,
+            svsRaw,
+            bvaebRaw,
+            kfaRaw
+        });
+
+        const updatedDoctor = {
+            ...doctors[doctorIndex],
+            ...bodyWithoutPassword,
+            title: title || doctors[doctorIndex].title,
+            street: req.body.street || doctors[doctorIndex].street || '',
+            zipCode: req.body.zipCode || doctors[doctorIndex].zipCode || '',
+            city: req.body.city || doctors[doctorIndex].city || '',
+            addressLine2: req.body.addressLine2 || doctors[doctorIndex].addressLine2 || '',
+            insurance: {
+                noContract: insuranceType === 'noContract',
+                oegk: insuranceType === 'hasContract' ? normalizeBool(oegkRaw) : false,
+                svs: insuranceType === 'hasContract' ? normalizeBool(svsRaw) : false,
+                bvaeb: insuranceType === 'hasContract' ? normalizeBool(bvaebRaw) : false,
+                kfa: insuranceType === 'hasContract' ? normalizeBool(kfaRaw) : false
+            },
+            insuranceType: insuranceType,
+            showEmail: normalizeBool(req.body.showEmail)
+        };
+
+        // Profilfoto verarbeiten
+        if (req.files && req.files.photo && req.files.photo[0]) {
+            const photoFile = req.files.photo[0];
+            const sourcePath = photoFile.path; // temp path (public/uploads/temp/...)
+            const destPath = path.join(__dirname, 'public', 'uploads', photoFile.filename);
+
+            // Altes Foto löschen
+            if (doctors[doctorIndex].photo) {
+                const oldPhotoPath = path.join(__dirname, 'public', 'uploads', doctors[doctorIndex].photo);
+                try { if (fs.existsSync(oldPhotoPath)) fs.unlinkSync(oldPhotoPath); } catch(_) {}
+            }
+
+            // Neues Foto verarbeiten und in endgültigen Ordner schreiben
+            await sharp(sourcePath)
+                .resize(400, 400, { fit: 'cover' })
+                .jpeg({ quality: 80 })
+                .toFile(destPath);
+
+            // Temp-Datei entfernen
+            try { if (fs.existsSync(sourcePath)) fs.unlinkSync(sourcePath); } catch(_) {}
+
+            updatedDoctor.photo = photoFile.filename;
+        }
+
+        // Galerie-Fotos verarbeiten
+        if (req.files && req.files.galleryPhotos) {
+            const galleryPhotos = [];
+            for (const file of req.files.galleryPhotos) {
+                const sourcePath = file.path; // temp path
+                const destPath = path.join(__dirname, 'public', 'uploads', file.filename);
+
+                await sharp(sourcePath)
+                    .resize(800, 600, { fit: 'inside', withoutEnlargement: true })
+                    .jpeg({ quality: 85 })
+                    .toFile(destPath);
+
+                try { if (fs.existsSync(sourcePath)) fs.unlinkSync(sourcePath); } catch(_) {}
+
+                galleryPhotos.push(file.filename);
+            }
+            updatedDoctor.galleryPhotos = [...(doctors[doctorIndex].galleryPhotos || []), ...galleryPhotos];
+        }
+
+        // Passwort aktualisieren, falls angegeben
+        if (password && password.trim() !== '') {
+            console.log(`Password change requested for ${req.params.email}: ${password}`);
+            updatedDoctor.password = await bcrypt.hash(password, 10);
+            console.log(`Password updated successfully for ${req.params.email}`);
+        } else {
+            console.log(`No password change for ${req.params.email} - password field empty or not provided`);
+        }
+
+        // Adresse zusammenstellen
+        if (updatedDoctor.street && updatedDoctor.zipCode && updatedDoctor.city) {
+            updatedDoctor.address = `${updatedDoctor.street}, ${updatedDoctor.zipCode} ${updatedDoctor.city}`;
+        }
+
+        // Profil als vollständig markieren, wenn alle Pflichtfelder ausgefüllt sind
+        updatedDoctor.isProfileComplete = !!(updatedDoctor.title && updatedDoctor.firstName && updatedDoctor.lastName);
+
+        doctors[doctorIndex] = updatedDoctor;
+        saveDoctors(doctors);
+
+        res.redirect(`/admin/edit/${encodeURIComponent(req.params.email)}`);
+    } catch (error) {
+        console.error('Fehler beim Aktualisieren des Arztprofils:', error);
+        res.status(500).send('Ein Fehler ist aufgetreten beim Aktualisieren des Arztprofils.');
+    }
+});
+
+// Admin: delete profile photo
+app.post('/admin/photo/delete/:email', requireAdmin, (req, res) => {
+    try {
+        const doctors = getDoctors();
+        const idx = doctors.findIndex(d => d.email === req.params.email);
+        if (idx === -1) return res.status(404).send('Arzt nicht gefunden');
+        const current = doctors[idx];
+        if (current.photo) {
+            const filePath = path.join(__dirname, 'public', 'uploads', current.photo);
+            try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch(_) {}
+        }
+        doctors[idx].photo = '';
+        saveDoctors(doctors);
+        res.redirect(`/admin/edit/${encodeURIComponent(req.params.email)}`);
+    } catch (e) {
+        console.error('Fehler beim Löschen des Profilfotos:', e);
+        res.redirect(`/admin/edit/${encodeURIComponent(req.params.email)}`);
+    }
+});
+
+// Admin: delete gallery photo
+app.post('/admin/gallery/delete/:email', requireAdmin, (req, res) => {
+    try {
+        const { photoName } = req.body || {};
+        if (!photoName) return res.redirect(`/admin/edit/${encodeURIComponent(req.params.email)}`);
+        const doctors = getDoctors();
+        const idx = doctors.findIndex(d => d.email === req.params.email);
+        if (idx === -1) return res.status(404).send('Arzt nicht gefunden');
+        const current = doctors[idx];
+        const uploadsPath = path.join(__dirname, 'public', 'uploads', photoName);
+        try { if (fs.existsSync(uploadsPath)) fs.unlinkSync(uploadsPath); } catch(_) {}
+        current.galleryPhotos = (current.galleryPhotos || []).filter(p => p !== photoName);
+        doctors[idx] = current;
+        saveDoctors(doctors);
+        res.redirect(`/admin/edit/${encodeURIComponent(req.params.email)}`);
+    } catch (e) {
+        console.error('Fehler beim Löschen des Galeriefotos:', e);
+        res.redirect(`/admin/edit/${encodeURIComponent(req.params.email)}`);
     }
 });
 
@@ -972,6 +1503,11 @@ app.post('/admin/change-password', requireAdmin, async (req, res) => {
 app.post('/upload-gallery-photo', requireAuth, upload.single('galleryPhotos'), async (req, res) => {
     try {
         if (!req.file) {
+            const acceptsHtml = (req.headers['accept'] || '').includes('text/html');
+            if (acceptsHtml) {
+                req.session.message = { type: 'error', text: 'Bitte wählen Sie ein Bild zum Hochladen aus.' };
+                return res.redirect('/profile');
+            }
             return res.status(400).json({ success: false, message: 'Bitte wählen Sie ein Bild zum Hochladen aus.' });
         }
 
@@ -983,6 +1519,11 @@ app.post('/upload-gallery-photo', requireAuth, upload.single('galleryPhotos'), a
             // Löschen der hochgeladenen Datei, wenn der Arzt nicht gefunden wird
             if (req.file.path) {
                 fs.unlinkSync(req.file.path);
+            }
+            const acceptsHtml = (req.headers['accept'] || '').includes('text/html');
+            if (acceptsHtml) {
+                req.session.message = { type: 'error', text: 'Arzt nicht gefunden' };
+                return res.redirect('/profile');
             }
             return res.status(404).json({ success: false, message: 'Arzt nicht gefunden' });
         }
@@ -1007,13 +1548,18 @@ app.post('/upload-gallery-photo', requireAuth, upload.single('galleryPhotos'), a
             fs.mkdirSync(doctorDir, { recursive: true });
         }
 
-        // Prüfen, ob bereits zwei Fotos vorhanden sind
-        if (doctors[doctorIndex].galleryPhotos && doctors[doctorIndex].galleryPhotos.length >= 2) {
+        // Prüfen, ob bereits drei Fotos vorhanden sind
+        if (doctors[doctorIndex].galleryPhotos && doctors[doctorIndex].galleryPhotos.length >= 3) {
             // Löschen der hochgeladenen Datei, da das Maximum erreicht ist
             if (req.file.path) {
                 fs.unlinkSync(req.file.path);
             }
-            return res.status(400).json({ success: false, message: 'Maximale Anzahl an Fotos erreicht (2)' });
+            const acceptsHtml = (req.headers['accept'] || '').includes('text/html');
+            if (acceptsHtml) {
+                req.session.message = { type: 'error', text: 'Maximale Anzahl an Fotos erreicht (3)' };
+                return res.redirect('/profile');
+            }
+            return res.status(400).json({ success: false, message: 'Maximale Anzahl an Fotos erreicht (3)' });
         }
 
         // Bildverarbeitung mit Sharp
@@ -1038,6 +1584,11 @@ app.post('/upload-gallery-photo', requireAuth, upload.single('galleryPhotos'), a
         doctors[doctorIndex].galleryPhotos.push(`${doctors[doctorIndex].doctorId}/${photoFileName}`);
         saveDoctors(doctors);
 
+        const acceptsHtml = (req.headers['accept'] || '').includes('text/html');
+        if (acceptsHtml) {
+            req.session.message = { type: 'success', text: 'Foto erfolgreich zur Galerie hinzugefügt.' };
+            return res.redirect('/profile');
+        }
         res.json({ 
             success: true, 
             photoUrl: `/uploads/${doctors[doctorIndex].doctorId}/${photoFileName}`,
@@ -1048,6 +1599,11 @@ app.post('/upload-gallery-photo', requireAuth, upload.single('galleryPhotos'), a
         // Versuchen die temporäre Datei zu löschen im Fehlerfall
         if (req.file && req.file.path && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
+        }
+        const acceptsHtml = (req.headers['accept'] || '').includes('text/html');
+        if (acceptsHtml) {
+            req.session.message = { type: 'error', text: 'Fehler beim Hochladen des Galeriefotos' };
+            return res.redirect('/profile');
         }
         res.status(500).json({ success: false, message: 'Fehler beim Hochladen des Galeriefotos' });
     }

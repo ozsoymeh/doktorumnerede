@@ -23,29 +23,35 @@
             <div class="bg-white rounded-lg shadow-md overflow-hidden">
                 <!-- Kopfbereich mit Foto und Namen -->
                 <div class="p-6 bg-gray-50 border-b border-gray-200">
-                    <div class="flex items-center space-x-6">
+                    <div class="flex items-center space-x-6 pl-4">
                         <% if (doctor.photo) { %>
-                            <img src="/uploads/<%= doctor.photo %>" alt="Arztfoto" class="w-[200px] h-[200px] object-cover rounded-full mx-auto">
+                            <img src="/uploads/<%= doctor.photo %>" alt="Arztfoto" class="w-[200px] h-[200px] object-cover rounded-full">
                         <% } else { %>
-                            <div class="w-[200px] h-[200px] bg-gray-200 flex items-center justify-center rounded-full mx-auto">
+                            <div class="w-[200px] h-[200px] bg-gray-200 flex items-center justify-center rounded-full">
                                 <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                                 </svg>
                             </div>
                         <% } %>
-                        <div>
+                        <div class="flex-1">
                             <h1 class="text-2xl font-bold text-gray-900">
                                 <%= doctor.title %> <%= doctor.academicTitle %> <%= doctor.firstName %> <%= doctor.lastName %>
                             </h1>
                             <div class="mt-2 text-lg text-gray-600">
-                                <% if (doctor.specialties && doctor.specialties.length > 0) { %>
-                                    <div><%= t('specialties.' + (doctor.title === 'Frau' ? 'female' : 'male') + '.' + doctor.specialties[0].split('.').pop()) || doctor.specialties[0] %></div>
-                                    <% if (doctor.specialties[1]) { %>
-                                        <div class="mt-1"><%= t('specialties.' + (doctor.title === 'Frau' ? 'female' : 'male') + '.' + doctor.specialties[1].split('.').pop()) || doctor.specialties[1] %></div>
-                                    <% } %>
-                                <% } else if (doctor.originalSpecialty) { %>
-                                    <%= doctor.title === 'Frau' ? 'Fachärztin für' : 'Facharzt für' %> <%= doctor.originalSpecialty.replace('Facharzt für ', '').replace('Fachärztin für ', '') %>
-                                <% } %>
+                                <% 
+                                    const specialtyKey = doctor.mainSpecialty || (doctor.specialties && doctor.specialties[0]);
+                                    let specialtyText = '';
+                                    if (specialtyKey && typeof specialties !== 'undefined') {
+                                        const genderKey = doctor.title === 'Frau' ? 'female' : 'male';
+                                        if (specialties[genderKey] && specialties[genderKey][specialtyKey]) {
+                                            specialtyText = specialties[genderKey][specialtyKey];
+                                        }
+                                    }
+                                    if (!specialtyText && doctor.originalSpecialty) {
+                                        specialtyText = (doctor.title === 'Frau' ? 'Fachärztin für' : 'Facharzt für') + ' ' + doctor.originalSpecialty.replace('Facharzt für ', '').replace('Fachärztin für ', '');
+                                    }
+                                %>
+                                <div><%= specialtyText || 'Fachgebiet wird geladen...' %></div>
                             </div>
                         </div>
                     </div>
@@ -90,6 +96,9 @@
                                     <% if (doctor.insurance.svs) { %><p>• SVS</p><% } %>
                                     <% if (doctor.insurance.bvaeb) { %><p>• BVAEB</p><% } %>
                                     <% if (doctor.insurance.kfa) { %><p>• KFA</p><% } %>
+                                    <% if (!(doctor.insurance.oegk || doctor.insurance.svs || doctor.insurance.bvaeb || doctor.insurance.kfa)) { %>
+                                        <p>Kassenvertrag</p>
+                                    <% } %>
                                 <% } %>
                             </div>
                         </div>

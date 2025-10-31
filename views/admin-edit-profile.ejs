@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profil bearbeiten</title>
+    <title>Arzt bearbeiten - Admin Dashboard</title>
     <link href="/css/output.css" rel="stylesheet">
 </head>
 <body class="h-full">
@@ -13,9 +13,11 @@
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="flex h-16 justify-between">
                     <div class="flex items-center space-x-4">
-                        <a href="/" class="flex items-center text-indigo-600 font-semibold">
-                            ← Startseite
+                        <a href="/admin" class="flex items-center text-indigo-600 font-semibold">
+                            ← Zurück zum Admin Dashboard
                         </a>
+                        <span class="text-gray-400">|</span>
+                        <span class="text-sm text-gray-600">Bearbeite: <%= doctor.firstName %> <%= doctor.lastName %></span>
                     </div>
                     <div class="flex items-center">
                         <form action="/logout" method="POST">
@@ -30,7 +32,7 @@
 
         <main>
             <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
-                <form id="profileForm" action="/profile/edit" method="POST" enctype="multipart/form-data">
+                <form action="/admin/edit/<%= doctor.email %>" method="POST" enctype="multipart/form-data">
                     <div class="space-y-12">
                         <!-- Profilbereich -->
                         <div class="border-b border-gray-900/10 pb-12">
@@ -102,14 +104,14 @@
                                 <div class="sm:col-span-3">
                                     <label for="firstName" class="block text-sm font-medium leading-6 text-gray-900">Vorname</label>
                                     <div class="mt-2">
-                                        <input type="text" id="firstName" name="firstName" value="<%= doctor.firstName || '' %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="text" id="firstName" name="firstName" value="<%= doctor.firstName %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
                                 <div class="sm:col-span-3">
                                     <label for="lastName" class="block text-sm font-medium leading-6 text-gray-900">Nachname</label>
                                     <div class="mt-2">
-                                        <input type="text" id="lastName" name="lastName" value="<%= doctor.lastName || '' %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="text" id="lastName" name="lastName" value="<%= doctor.lastName %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
@@ -118,6 +120,15 @@
                                     <div class="mt-2">
                                         <select name="mainSpecialty" id="mainSpecialty" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                                             <option value="">Bitte wählen</option>
+                                            <% 
+                                                const specialtyType = doctor.title === 'Frau' ? 'female' : 'male';
+                                                const specialtyList = specialties[specialtyType] || specialties.male;
+                                            %>
+                                            <% Object.entries(specialtyList).forEach(([key, value]) => { %>
+                                                <option value="<%= key %>" <%= doctor.specialties && doctor.specialties[0] === key ? 'selected' : '' %>>
+                                                    <%= value %>
+                                                </option>
+                                            <% }); %>
                                         </select>
                                     </div>
                                     <p class="mt-1 text-sm text-gray-500">Die Liste ändert sich basierend auf der Anrede (Herr/Frau)</p>
@@ -126,7 +137,7 @@
                                 <div class="col-span-full">
                                     <label for="address" class="block text-sm font-medium leading-6 text-gray-900">Adresse</label>
                                     <div class="mt-2">
-                                        <input type="text" id="address" name="address" value="<%= doctor.street && doctor.zipCode && doctor.city ? `${doctor.street}, ${doctor.zipCode} ${doctor.city}` : (doctor.address || '') %>" placeholder="Beginnen Sie mit der Eingabe Ihrer Adresse..." class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="text" id="address" name="address" value="<%= doctor.address || '' %>" placeholder="Beginnen Sie mit der Eingabe Ihrer Adresse..." class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                                     </div>
                                     <p class="mt-1 text-sm text-gray-500">Wählen Sie eine Adresse aus den Vorschlägen für eine genaue Validierung</p>
                                 </div>
@@ -163,7 +174,7 @@
                                 <div class="sm:col-span-4">
                                     <label for="email" class="block text-sm font-medium leading-6 text-gray-900">E-Mail</label>
                                     <div class="mt-2">
-                                        <input type="email" id="email" name="email" value="<%= doctor.email || '' %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="email" id="email" name="email" value="<%= doctor.email %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
@@ -183,33 +194,11 @@
 
                                 <!-- Passwort ändern -->
                                 <div class="col-span-full">
-                                    <label class="block text-sm font-medium leading-6 text-gray-900">Passwort ändern</label>
-                                    <div class="mt-2 max-w-md">
-                                        <div class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-3">
-                                            <div>
-                                                <label for="currentPassword" class="block text-xs text-gray-500 mb-1">Aktuelles Passwort</label>
-                                                <input type="password" id="currentPassword" name="currentPassword" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Aktuelles Passwort">
-                                            </div>
-                                            <div>
-                                                <label for="newPassword" class="block text-xs text-gray-500 mb-1">Neues Passwort</label>
-                                                <input type="password" id="newPassword" name="newPassword" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Neues Passwort">
-                                            </div>
-                                            <div>
-                                                <label for="confirmPassword" class="block text-xs text-gray-500 mb-1">Bestätigen</label>
-                                                <input type="password" id="confirmPassword" name="confirmPassword" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Neues Passwort bestätigen">
-                                            </div>
-                                        </div>
+                                    <label for="password" class="block text-sm font-medium leading-6 text-gray-900">Neues Passwort (optional)</label>
+                                    <div class="mt-2 max-w-xs">
+                                        <input type="password" id="password" name="password" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Leer lassen, um das Passwort nicht zu ändern">
                                     </div>
-                                    <p class="mt-1 text-sm text-gray-500">Leer lassen, um das Passwort nicht zu ändern</p>
-                                </div>
-
-                                <div class="col-span-full">
-                                    <div class="flex items-center">
-                                        <input type="checkbox" id="showEmail" name="showEmail" value="true" <%= doctor.showEmail ? 'checked' : '' %> class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
-                                        <label for="showEmail" class="ml-3 block text-sm leading-6 text-gray-900">
-                                            E-Mail-Adresse öffentlich anzeigen
-                                        </label>
-                                    </div>
+                                    <p class="mt-1 text-sm text-gray-500">Lassen Sie dieses Feld leer, um das aktuelle Passwort beizubehalten</p>
                                 </div>
                             </div>
                         </div>
@@ -224,7 +213,7 @@
                                     <div class="mt-6 space-y-6">
                                         <div class="flex items-center gap-x-3">
                                             <input type="radio" id="noContract" name="insuranceType" value="noContract"
-                                                <%= (doctor.insurance?.noContract || doctor.insuranceType === 'noContract') ? 'checked' : '' %>
+                                                <%= doctor.insurance && doctor.insurance.noContract ? 'checked' : '' %>
                                                 class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600">
                                             <label for="noContract" class="block text-sm font-medium leading-6 text-gray-900">
                                                 Keine - Nur Wahlarzt
@@ -233,7 +222,7 @@
 
                                         <div class="flex items-center gap-x-3">
                                             <input type="radio" id="hasContract" name="insuranceType" value="hasContract"
-                                                <%= (!doctor.insurance?.noContract && doctor.insuranceType !== 'noContract') ? 'checked' : '' %>
+                                                <%= doctor.insurance && !doctor.insurance.noContract ? 'checked' : '' %>
                                                 class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600">
                                             <label for="hasContract" class="block text-sm font-medium leading-6 text-gray-900">
                                                 Kassenverträge mit:
@@ -298,25 +287,22 @@
                     </div>
 
                     <div class="mt-6 flex flex-col items-end gap-x-6 gap-y-3">
-                        <button type="submit" class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-                            Speichern
-                        </button>
-                        <% if (message) { %>
-                            <div class="w-full rounded-md <%= message.type === 'success' ? 'bg-green-50 p-4' : 'bg-red-50 p-4' %>">
-                                <p class="text-sm <%= message.type === 'success' ? 'text-green-800' : 'text-red-800' %>"><%= message.text %></p>
-                            </div>
-                        <% } %>
+                        <div class="flex items-center gap-x-6">
+                            <a href="/admin" class="text-sm font-semibold leading-6 text-gray-900">Abbrechen</a>
+                            <button type="submit" class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                                Speichern
+                            </button>
+                        </div>
                     </div>
                 </form>
-                
                 <!-- Separate form for deleting profile photo (must not be nested) -->
-                <form id="deletePhotoForm" action="/profile/photo/delete" method="POST" style="display:none;"></form>
+                <form id="deletePhotoForm" action="/admin/photo/delete/<%= doctor.email %>" method="POST" style="display:none;"></form>
                 
                 <!-- Bildergalerie -->
                 <div class="mt-12 border-t border-gray-900/10 pt-10">
                     <h2 class="text-base font-semibold leading-7 text-gray-900">Bildergalerie</h2>
                     <p class="mt-1 text-sm leading-6 text-gray-600">
-                        Ihre Ordinationsfotos
+                        Ordinationsfotos
                     </p>
                     
                     <div class="mt-6 flex flex-col gap-4">
@@ -328,7 +314,7 @@
                                          alt="Ordinationsfoto" 
                                          class="w-full h-auto rounded-lg shadow-md"
                                          style="aspect-ratio: 4/3; object-fit: cover;">
-                                    <form action="/delete-gallery-photo" method="POST" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <form action="/admin/gallery/delete/<%= doctor.email %>" method="POST" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <input type="hidden" name="photoName" value="<%= photo %>">
                                         <button type="submit" class="bg-red-600 text-white p-2 rounded-full hover:bg-red-700">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -342,19 +328,8 @@
                         <% } else { %>
                             <p class="text-sm text-gray-500">Noch keine Fotos hinzugefügt.</p>
                         <% } %>
-                        
-                        <% if (!doctor.galleryPhotos || doctor.galleryPhotos.length < 3) { %>
-                            <form action="/profile/edit" method="POST" enctype="multipart/form-data" class="flex items-center gap-x-3">
-                                <input type="file" name="galleryPhotos" id="galleryPhotos" accept="image/*" multiple class="hidden">
-                                <button type="button" 
-                                        onclick="document.getElementById('galleryPhotos').click()" 
-                                        class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                                    Fotos hinzufügen
-                                </button>
-                            </form>
-                        <% } %>
                     </div>
-                    <p class="mt-3 text-sm leading-6 text-gray-600">Erlaubte Formate: JPG, JPEG, PNG. Maximale Größe: 4MB.</p>
+                    <p class="mt-3 text-sm leading-6 text-gray-600">Fotos können über das Hauptformular hinzugefügt werden.</p>
                 </div>
                 
                 <!-- Google Maps Box hinzufügen -->
@@ -375,7 +350,7 @@
     <!-- Spezifische JavaScript-Daten aus dem Server -->
     <div id="js-data" 
         data-specialties="<%= JSON.stringify(specialties) %>"
-        data-main-specialty="<%= doctor.mainSpecialty || (doctor.specialties && doctor.specialties[0]) || '' %>"
+        data-lang="de"
         data-google-maps-api-key="<%= googleMapsApiKey %>"
         style="display: none;">
     </div>
@@ -385,16 +360,99 @@
         const dataElement = document.getElementById('js-data');
         const specialtiesData = JSON.parse(dataElement.dataset.specialties);
 
-        // Auto-submit on file selection
-        (function autoSubmitOnFileChange(){
-            try {
-                var form = document.getElementById('profileForm');
-                var photoInput = document.getElementById('photo');
-                var galleryInput = document.getElementById('galleryPhotos');
-                if (photoInput && form) photoInput.addEventListener('change', function(){ if (this.files && this.files.length) form.submit(); });
-                if (galleryInput && form) galleryInput.addEventListener('change', function(){ if (this.files && this.files.length) form.submit(); });
-            } catch(_) {}
-        })();
+        // Foto-Validierung
+        function validateImage(file, maxSize = 4) {
+            // Überprüfe Dateityp
+            if (!file.type.match(/^image\/(jpeg|jpg|png)$/)) {
+                alert('Nur JPG, JPEG und PNG Dateien sind erlaubt!');
+                return false;
+            }
+            
+            // Überprüfe Dateigröße (in MB)
+            if (file.size > maxSize * 1024 * 1024) {
+                alert('Die Dateigröße darf maximal 4MB betragen!');
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Formularvalidierung
+        document.querySelector('form')?.addEventListener('submit', function(e) {
+            const photoInput = document.getElementById('photo');
+            if (photoInput.files.length > 0 && !validateImage(photoInput.files[0])) {
+                e.preventDefault();
+                return;
+            }
+        });
+
+        // Gender detection function (matches server-side function)
+        function detectGenderFromName(firstName) {
+            if (!firstName) return null;
+            
+            const name = firstName.toLowerCase().trim();
+            
+            // Turkish female names
+            const turkishFemaleNames = [
+                'ayşe', 'fatma', 'emine', 'hatice', 'zeynep', 'elif', 'meryem', 'zehra', 'sibel', 'özlem',
+                'aygül', 'aynur', 'ayşegül', 'gül', 'gülay', 'gülsüm', 'hülya', 'melek', 'nur', 'nurcan',
+                'pınar', 'pinar', 'serpil', 'sultan', 'şule', 'tuğba', 'yasemin', 'yeliz', 'zeliha', 'deniz', 'eda',
+                'emel', 'esra', 'feride', 'gamze', 'hande', 'ilknur', 'jale', 'kübra', 'leyla', 'meltem',
+                'necla', 'özge', 'pelin', 'selin', 'tuba', 'ümmü', 'vildan', 'yıldız', 'zuhal', 'aslı',
+                'berna', 'cemre', 'dilek', 'ecem', 'figen', 'gizem', 'hacer', 'ipek', 'jülide', 'kadriye',
+                'lale', 'müge', 'nihan', 'özlem', 'pembe', 'seda', 'tülay', 'ünal', 'vildan', 'yaprak',
+                'canan', 'derya', 'sema', 'sabiha', 'sevgi', 'medine', 'melisa', 'neslihan'
+            ];
+            
+            // Turkish male names
+            const turkishMaleNames = [
+                'mehmet', 'mustafa', 'ahmet', 'ali', 'hüseyin', 'hasan', 'ibrahim', 'ismail', 'ömer', 'osman',
+                'batuhan', 'berk', 'can', 'cem', 'deniz', 'emre', 'erhan', 'furkan', 'gökhan', 'halil',
+                'ibrahim', 'kadir', 'kerem', 'murat', 'onur', 'özkan', 'serkan', 'taner', 'umut', 'yasin',
+                'yusuf', 'zafer', 'abdullah', 'adnan', 'burak', 'cihan', 'doğan', 'emir', 'ferhat', 'gürkan',
+                'hakan', 'ilker', 'jale', 'kamil', 'levent', 'mert', 'nihat', 'orhan', 'pınar', 'ramazan',
+                'selim', 'tayfun', 'ufuk', 'volkan', 'yavuz', 'zeki', 'arif', 'bülent', 'cengiz', 'dursun',
+                'engin', 'fahri', 'güven', 'hüseyin', 'ismet', 'jülide', 'kürşat', 'leyla', 'mücahit', 'nuri'
+            ];
+            
+            // German female names
+            const germanFemaleNames = [
+                'anna', 'maria', 'petra', 'monika', 'elke', 'sabine', 'andrea', 'barbara', 'christina', 'daniela',
+                'elena', 'franziska', 'gabriele', 'heike', 'ingrid', 'julia', 'katharina', 'lisa', 'martina', 'nicole',
+                'petra', 'regina', 'sandra', 'tina', 'ulrike', 'veronika', 'waltraud', 'yvonne', 'zoe', 'alexandra',
+                'britta', 'caroline', 'diana', 'eva', 'friederike', 'gudrun', 'helga', 'iris', 'johanna', 'kristin',
+                'lena', 'margarete', 'nina', 'olga', 'patricia', 'renate', 'sylvia', 'theresa', 'ursula', 'viktoria'
+            ];
+            
+            // German male names
+            const germanMaleNames = [
+                'hans', 'peter', 'wolfgang', 'klaus', 'jürgen', 'dieter', 'horst', 'gerhard', 'helmut', 'werner',
+                'alexander', 'bernd', 'christian', 'dirk', 'erik', 'florian', 'günther', 'heinz', 'ingo', 'jens',
+                'karl', 'lars', 'michael', 'norbert', 'oliver', 'ralf', 'stefan', 'thomas', 'uwe', 'volker',
+                'andreas', 'benedikt', 'carl', 'dennis', 'erwin', 'frank', 'georg', 'herbert', 'ingo', 'jörg',
+                'kurt', 'ludwig', 'manfred', 'nicolas', 'otto', 'paul', 'rainer', 'sebastian', 'torsten', 'ulrich'
+            ];
+            
+            // Check Turkish names first (more common in this context)
+            if (turkishFemaleNames.includes(name)) return 'Frau';
+            if (turkishMaleNames.includes(name)) return 'Herr';
+            
+            // Check German names
+            if (germanFemaleNames.includes(name)) return 'Frau';
+            if (germanMaleNames.includes(name)) return 'Herr';
+            
+            // Check for common Turkish name endings
+            if (name.endsWith('e') || name.endsWith('a') || name.endsWith('i') || name.endsWith('ü') || name.endsWith('ö')) {
+                return 'Frau';
+            }
+            
+            // Check for common Turkish male name endings
+            if (name.endsWith('t') || name.endsWith('n') || name.endsWith('r') || name.endsWith('k') || name.endsWith('m')) {
+                return 'Herr';
+            }
+            
+            return null; // Uncertain
+        }
 
         // Update specialty dropdown based on title
         function updateSpecialtyDropdown(selectedTitle) {
@@ -403,7 +461,7 @@
             
             const specialtyType = selectedTitle === 'Frau' ? 'female' : 'male';
             const specialtyList = specialtiesData[specialtyType] || specialtiesData.male;
-            const currentValue = specialtySelect.value || dataElement.dataset.mainSpecialty;
+            const currentValue = specialtySelect.value;
             
             // Leere Dropdown-Optionen
             specialtySelect.innerHTML = '<option value="">Bitte wählen</option>';
@@ -425,8 +483,41 @@
         const titleSelect = document.getElementById('title');
         const specialtySelect = document.getElementById('mainSpecialty');
         
+        if (firstNameInput && titleSelect && specialtySelect) {
+            firstNameInput.addEventListener('input', function() {
+                const firstName = this.value.trim();
+                if (firstName) {
+                    const detectedGender = detectGenderFromName(firstName);
+                    if (detectedGender) {
+                        titleSelect.value = detectedGender;
+                        updateSpecialtyDropdown(detectedGender);
+                        
+                        // Show a subtle notification
+                        const notification = document.createElement('div');
+                        notification.className = 'text-sm text-blue-600 mt-1';
+                        notification.textContent = `✓ Anrede automatisch auf "${detectedGender}" gesetzt`;
+                        
+                        // Remove any existing notification
+                        const existingNotification = titleSelect.parentNode.querySelector('.text-blue-600');
+                        if (existingNotification) {
+                            existingNotification.remove();
+                        }
+                        
+                        titleSelect.parentNode.appendChild(notification);
+                        
+                        // Remove notification after 3 seconds
+                        setTimeout(() => {
+                            if (notification.parentNode) {
+                                notification.remove();
+                            }
+                        }, 3000);
+                    }
+                }
+            });
+        }
+
+        // Specialty Dropdown aktualisieren wenn Anrede geändert wird
         if (titleSelect && specialtySelect) {
-            updateSpecialtyDropdown(titleSelect.value || 'Herr');
             titleSelect.addEventListener('change', function() {
                 updateSpecialtyDropdown(this.value);
             });
@@ -436,18 +527,22 @@
         const hasContract = document.getElementById('hasContract');
         const insuranceOptions = document.getElementById('insuranceOptions');
         if (hasContract && insuranceOptions) {
+            // Always show insurance options, but disable them when "Wahlarzt" is selected
             insuranceOptions.style.display = 'block';
 
+            // Versicherungsoptionen ein-/ausblenden und aktivieren/deaktivieren
             document.querySelectorAll('input[name="insuranceType"]').forEach(radio => {
                 radio.addEventListener('change', function() {
                     const checkboxes = document.querySelectorAll('#insuranceOptions input[type="checkbox"]');
                     
                     if (this.value === 'hasContract') {
+                        // Enable checkboxes when "Kassenverträge" is selected
                         checkboxes.forEach(checkbox => {
                             checkbox.disabled = false;
                             checkbox.parentElement.style.opacity = '1';
                         });
                     } else if (this.value === 'noContract') {
+                        // Disable and uncheck when "Wahlarzt" is selected
                         checkboxes.forEach(checkbox => {
                             checkbox.checked = false;
                             checkbox.disabled = true;
@@ -457,74 +552,60 @@
                 });
             });
             
+            // Set initial state
             const currentSelection = document.querySelector('input[name="insuranceType"]:checked');
             if (currentSelection) {
                 currentSelection.dispatchEvent(new Event('change'));
             }
         }
 
-        // Update hidden inputs when checkboxes change
+        // Update hidden inputs when checkboxes change (same as profile.ejs)
         const insuranceCheckboxes = document.querySelectorAll('#insuranceOptions input[type="checkbox"]');
-        console.log('Found insurance checkboxes:', insuranceCheckboxes.length);
         insuranceCheckboxes.forEach(checkbox => {
-            const insuranceType = checkbox.getAttribute('data-insurance');
-            const hiddenInput = document.getElementById('hidden_' + insuranceType);
-            console.log('Insurance checkbox:', insuranceType, 'hidden input:', hiddenInput ? 'found' : 'NOT FOUND', 'checked:', checkbox.checked);
-            
-            // Initialize hidden input value on page load
-            if (hiddenInput) {
-                hiddenInput.value = checkbox.checked ? 'true' : 'false';
-                console.log('Initialized', insuranceType, 'to', hiddenInput.value);
-            }
-            
             checkbox.addEventListener('change', function() {
                 const insuranceType = this.getAttribute('data-insurance');
                 const hiddenInput = document.getElementById('hidden_' + insuranceType);
                 if (hiddenInput) {
                     hiddenInput.value = this.checked ? 'true' : 'false';
-                    console.log('Updated', insuranceType, 'to', hiddenInput.value);
-                } else {
-                    console.error('Hidden input not found for', insuranceType);
                 }
             });
+            // Initialize hidden input value on page load
+            const insuranceType = checkbox.getAttribute('data-insurance');
+            const hiddenInput = document.getElementById('hidden_' + insuranceType);
+            if (hiddenInput && checkbox.checked !== undefined) {
+                hiddenInput.value = checkbox.checked ? 'true' : 'false';
+            }
         });
 
-        // Ensure all insurance checkboxes update hidden inputs before form submission
-        const profileForm = document.getElementById('profileForm');
-        if (profileForm) {
-            profileForm.addEventListener('submit', function(e) {
-                console.log('Form submitting - updating insurance values');
-                // Update all hidden inputs based on current checkbox state
+        // Update hidden inputs before form submission
+        const adminEditForm = document.querySelector('form');
+        if (adminEditForm) {
+            adminEditForm.addEventListener('submit', function(e) {
                 insuranceCheckboxes.forEach(checkbox => {
                     const insuranceType = checkbox.getAttribute('data-insurance');
                     const hiddenInput = document.getElementById('hidden_' + insuranceType);
                     if (hiddenInput) {
-                        // If checkbox is disabled or insuranceType is noContract, set to false
                         const insuranceTypeRadio = document.querySelector('input[name="insuranceType"]:checked');
                         if (insuranceTypeRadio && insuranceTypeRadio.value === 'noContract') {
                             hiddenInput.value = 'false';
                         } else {
                             hiddenInput.value = checkbox.checked ? 'true' : 'false';
                         }
-                        console.log('Final value for', insuranceType, ':', hiddenInput.value, '(checkbox checked:', checkbox.checked, ')');
-                    } else {
-                        console.error('Hidden input not found for', insuranceType, 'during form submit');
                     }
                 });
-                
-                // Log all form data being submitted
-                const formData = new FormData(profileForm);
-                console.log('Form data being submitted:');
-                for (let [key, value] of formData.entries()) {
-                    if (key.startsWith('insurance')) {
-                        console.log('  ', key, ':', value);
-                    }
-                }
-                // Don't prevent default - let form submit normally
             });
-        } else {
-            console.error('Profile form not found!');
         }
+
+        // Auto-submit on file selection
+        (function autoSubmitOnFileChange(){
+            try {
+                var form = document.querySelector('form[action^="/admin/edit/"]');
+                var photoInput = document.getElementById('photo');
+                var galleryInput = document.getElementById('galleryPhotos');
+                if (photoInput && form) photoInput.addEventListener('change', function(){ if (this.files && this.files.length) form.submit(); });
+                if (galleryInput && form) galleryInput.addEventListener('change', function(){ if (this.files && this.files.length) form.submit(); });
+            } catch(_) {}
+        })();
 
         // Google Maps Places API für Adressvalidierung
         function initAutocomplete() {
@@ -534,6 +615,7 @@
                 const cityInput = document.getElementById('city');
                 const addressInput = document.getElementById('address');
 
+                // Prefill combined address if single fields exist
                 const streetVal = streetInput.value;
                 const zipCodeVal = zipCodeInput.value;
                 const cityVal = cityInput.value;
@@ -544,14 +626,23 @@
 
                 const autocompleteOptions = {
                     componentRestrictions: { country: ['at'] },
-                    fields: ['address_component', 'geometry', 'name', 'formatted_address'],
-                    types: ['establishment', 'address']
+                    fields: ['address_component', 'geometry'],
+                    types: ['address']
                 };
 
                 const autocomplete = new google.maps.places.Autocomplete(addressInput, autocompleteOptions);
                 
+                // Allow manual editing by preventing autocomplete from taking over
                 addressInput.addEventListener('focus', function() {
                     this.select();
+                });
+                
+                // Allow manual typing without autocomplete interference
+                addressInput.addEventListener('input', function() {
+                    // Clear any autocomplete suggestions if user is typing manually
+                    if (this.value.length > 0) {
+                        this.classList.remove('border-red-500');
+                    }
                 });
 
                 autocomplete.addListener('place_changed', function () {
@@ -565,31 +656,27 @@
 
                         addressInput.classList.remove('border-red-500');
 
-                        // Use formatted_address if available (works for both establishments and addresses)
-                        let formattedAddress = place.formatted_address || '';
-                        if (formattedAddress) {
-                            addressInput.value = formattedAddress;
-                        }
-
                         let streetFromPlace = '';
                         let streetNumber = '';
                         let zipCode = '';
                         let city = '';
 
                         for (const component of place.address_components || []) {
-                            const types = component.types;
-                            
-                            if (types.includes('route')) {
-                                streetFromPlace = component.long_name;
-                            }
-                            if (types.includes('street_number')) {
-                                streetNumber = component.long_name;
-                            }
-                            if (types.includes('postal_code')) {
-                                zipCode = component.long_name;
-                            }
-                            if (types.includes('locality')) {
-                                city = component.long_name;
+                            const componentType = component.types[0];
+
+                            switch (componentType) {
+                                case 'route':
+                                    streetFromPlace = component.long_name;
+                                    break;
+                                case 'street_number':
+                                    streetNumber = component.long_name;
+                                    break;
+                                case 'postal_code':
+                                    zipCode = component.long_name;
+                                    break;
+                                case 'locality':
+                                    city = component.long_name;
+                                    break;
                             }
                         }
 
@@ -599,91 +686,80 @@
                         zipCodeInput.value = zipCode;
                         cityInput.value = city;
 
-                        initMap();
+                        console.log('Parsed address:', fullStreet, zipCode, city);
+
+                        if (!streetFromPlace || !zipCode || !city) {
+                            alert('Bitte wählen Sie eine vollständige Adresse mit Straße, PLZ und Stadt');
+                        }
                     } catch (error) {
                         console.error('Fehler bei place_changed:', error);
                         streetInput.value = addressInput.value;
                     }
                 });
+
+                addressInput.addEventListener('blur', function () {
+                    setTimeout(() => {
+                        if (!streetInput.value && addressInput.value.trim().length > 0) {
+                            streetInput.value = addressInput.value;
+                            console.log('Manuelle Adresseingabe übernommen:', addressInput.value);
+                        }
+                    }, 300);
+                });
+
+                console.log('Google Maps Autocomplete erfolgreich initialisiert');
             } catch (error) {
                 console.error('Fehler bei Autocomplete-Initialisierung:', error);
-            }
-        }
-
-        // Map-Variablen
-        let map;
-        let marker;
-
-        function initMap() {
-            try {
-                const mapDiv = document.getElementById('map');
-                if (!mapDiv || !window.google || !window.google.maps) return;
-
-                const street = document.getElementById('street').value;
-                const zipCode = document.getElementById('zipCode').value;
-                const city = document.getElementById('city').value;
-                const address = document.getElementById('address').value;
-                
-                let fullAddress = '';
-                if (street && zipCode && city) {
-                    fullAddress = `${street}, ${zipCode} ${city}, Österreich`;
-                } else if (address) {
-                    fullAddress = address + ', Österreich';
-                }
-                
-                if (!fullAddress) {
-                    const defaultPosition = { lat: 48.2082, lng: 16.3738 };
-                    map = new google.maps.Map(mapDiv, {
-                        center: defaultPosition,
-                        zoom: 13,
-                        mapTypeControl: false
-                    });
-                    return;
-                }
-                
-                const geocoder = new google.maps.Geocoder();
-                geocoder.geocode({ address: fullAddress }, function(results, status) {
-                    if (status === google.maps.GeocoderStatus.OK && results[0]) {
-                        const position = results[0].geometry.location;
-                        
-                        map = new google.maps.Map(mapDiv, {
-                            center: position,
-                            zoom: 15,
-                            mapTypeControl: false
-                        });
-                        
-                        marker = new google.maps.Marker({
-                            position: position,
-                            map: map,
-                            title: fullAddress
-                        });
-                        
-                        const infoWindow = new google.maps.InfoWindow({
-                            content: `<div><h3 class="font-bold">Praxisstandort</h3><p>${fullAddress}</p></div>`
-                        });
-                        
-                        marker.addListener('click', function() {
-                            infoWindow.open(map, marker);
-                        });
-                        
-                        infoWindow.open(map, marker);
-                    } else {
-                        const defaultPosition = { lat: 48.2082, lng: 16.3738 };
-                        map = new google.maps.Map(mapDiv, {
-                            center: defaultPosition,
-                            zoom: 12
-                        });
-                    }
+                const fallbackAddressInput = document.getElementById('address');
+                fallbackAddressInput.addEventListener('blur', function () {
+                    document.getElementById('street').value = fallbackAddressInput.value;
                 });
-            } catch (error) {
-                console.error('Fehler bei der Karteninitialisierung:', error);
             }
         }
 
-        function initPage() {
-            initAutocomplete();
-            initMap();
-        }
+        // API Fallback bei Ladefehler
+        window.gm_authFailure = function () {
+            console.error('Google Maps Authentifizierungsfehler');
+            const addressInput = document.getElementById('address');
+            addressInput.placeholder = 'Bitte geben Sie Ihre vollständige Adresse ein';
+            addressInput.addEventListener('blur', function () {
+                const parts = this.value.split(',');
+                if (parts.length > 1) {
+                    document.getElementById('street').value = parts[0].trim();
+                    const cityParts = parts[1].trim().split(' ');
+                    if (cityParts.length > 1) {
+                        document.getElementById('zipCode').value = cityParts[0].trim();
+                        document.getElementById('city').value = cityParts.slice(1).join(' ').trim();
+                    } else {
+                        document.getElementById('city').value = cityParts[0].trim();
+                    }
+                } else {
+                    document.getElementById('street').value = this.value;
+                }
+            });
+        };
+
+        // Retry if Google API fails to load
+        setTimeout(function () {
+            if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+                gm_authFailure();
+            }
+        }, 5000);
+
+        // Formularvalidierung beim Absenden (keine Pflichtfelder für Admin)
+        document.querySelector('form')?.addEventListener('submit', function (e) {
+            const street = document.getElementById('street').value.trim();
+            const address = document.getElementById('address').value.trim();
+
+            // Fallback: Wenn Straße leer, aber Adresse vorhanden → übernehmen
+            if (!street && address) {
+                document.getElementById('street').value = address;
+            }
+            // Keine Validierung - Admin kann ohne Adresse speichern
+        });
+
+        // API nachladen
+        let retryCount = 0;
+        const maxRetries = 2;
 
         function loadGoogleMapsAPI() {
             const apiKey = dataElement.dataset.googleMapsApiKey;
@@ -699,9 +775,129 @@
 
             script.onerror = function () {
                 console.error('Fehler beim Laden der Google Maps API');
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    console.log(`Retrying... (${retryCount}/${maxRetries})`);
+                    setTimeout(loadGoogleMapsAPI, 1000);
+                } else {
+                    gm_authFailure();
+                }
             };
 
             document.head.appendChild(script);
+        }
+
+        // Map-Variablen
+        let map;
+        let marker;
+
+        // Kombinierte Initialisierungsfunktion für Google Maps
+        function initPage() {
+            // Initialisiere Autocomplete für Adresseingabe
+            initAutocomplete();
+            
+            // Initialisiere die Karte
+            initMap();
+        }
+
+        // Initialisiere Google Maps mit der Adresse des Arztes
+        function initMap() {
+            try {
+                const mapDiv = document.getElementById('map');
+                if (!mapDiv) return;
+
+                // Adressdaten sammeln
+                const street = document.getElementById('street').value;
+                const zipCode = document.getElementById('zipCode').value;
+                const city = document.getElementById('city').value;
+                
+                // Wenn keine vollständige Adresse vorhanden ist, Wien als Standard anzeigen
+                if (!street || !zipCode || !city) {
+                    const defaultPosition = { lat: 48.2082, lng: 16.3738 }; // Wien
+                    map = new google.maps.Map(mapDiv, {
+                        center: defaultPosition,
+                        zoom: 13,
+                        mapTypeControl: false
+                    });
+                    
+                    // Info-Hinweis anzeigen
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mt-4';
+                    infoDiv.innerHTML = '<p>Bitte geben Sie Ihre vollständige Adresse ein, um Ihren Standort auf der Karte anzuzeigen.</p>';
+                    mapDiv.parentNode.insertBefore(infoDiv, mapDiv.nextSibling);
+                    
+                    return;
+                }
+                
+                // Vollständige Adresse für Geocoding
+                const fullAddress = `${street}, ${zipCode} ${city}, Österreich`;
+                
+                // Geocoding durchführen
+                const geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ address: fullAddress }, function(results, status) {
+                    if (status === google.maps.GeocoderStatus.OK && results[0]) {
+                        const position = results[0].geometry.location;
+                        
+                        // Karte initialisieren
+                        map = new google.maps.Map(mapDiv, {
+                            center: position,
+                            zoom: 15,
+                            mapTypeControl: false
+                        });
+                        
+                        // Marker hinzufügen
+                        marker = new google.maps.Marker({
+                            position: position,
+                            map: map,
+                            title: fullAddress
+                        });
+                        
+                        // Info-Window mit Link für Routenplanung
+                        const contentString = `
+                            <div>
+                                <h3 class="font-bold">Praxisstandort</h3>
+                                <p>${fullAddress}</p>
+                                <p class="mt-2">
+                                    <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}" 
+                                       target="_blank" 
+                                       class="text-blue-600 hover:text-blue-800">
+                                        Routenplanung starten
+                                    </a>
+                                </p>
+                            </div>
+                        `;
+                        
+                        const infoWindow = new google.maps.InfoWindow({
+                            content: contentString
+                        });
+                        
+                        // Öffne Info-Window beim Klick auf den Marker
+                        marker.addListener('click', function() {
+                            infoWindow.open(map, marker);
+                        });
+                        
+                        // Info-Window initial öffnen
+                        infoWindow.open(map, marker);
+                    } else {
+                        console.error('Geocoding fehlgeschlagen:', status);
+                        
+                        // Fallback auf Wien
+                        const defaultPosition = { lat: 48.2082, lng: 16.3738 }; // Wien
+                        map = new google.maps.Map(mapDiv, {
+                            center: defaultPosition,
+                            zoom: 12
+                        });
+                        
+                        // Fehlermeldung anzeigen
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-4';
+                        errorDiv.innerHTML = '<p>Die Adresse konnte nicht auf der Karte gefunden werden. Bitte überprüfen Sie Ihre Adressangaben.</p>';
+                        mapDiv.parentNode.insertBefore(errorDiv, mapDiv.nextSibling);
+                    }
+                });
+            } catch (error) {
+                console.error('Fehler bei der Karteninitialisierung:', error);
+            }
         }
 
         loadGoogleMapsAPI();

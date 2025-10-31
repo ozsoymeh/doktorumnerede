@@ -83,7 +83,7 @@
                         <div>
                             <label for="firstName" class="block text-sm font-medium leading-6 text-gray-900">Vorname *</label>
                             <div class="mt-2">
-                                <input type="text" id="firstName" name="firstName" value="<%= doctor.firstName %>" required
+                                <input type="text" id="firstName" name="firstName" value="<%= doctor.firstName %>" required autocomplete="given-name"
                                     class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                             </div>
                         </div>
@@ -91,7 +91,7 @@
                         <div>
                             <label for="lastName" class="block text-sm font-medium leading-6 text-gray-900">Nachname *</label>
                             <div class="mt-2">
-                                <input type="text" id="lastName" name="lastName" value="<%= doctor.lastName %>" required
+                                <input type="text" id="lastName" name="lastName" value="<%= doctor.lastName %>" required autocomplete="family-name"
                                     class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                             </div>
                         </div>
@@ -119,7 +119,7 @@
                         <div>
                             <label for="street" class="block text-sm font-medium leading-6 text-gray-900">Straße und Hausnummer</label>
                             <div class="mt-2">
-                                <input type="text" id="street" name="street" value="<%= doctor.street %>"
+                                <input type="text" id="street" name="street" value="<%= doctor.street %>" autocomplete="street-address"
                                     class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                             </div>
                         </div>
@@ -127,7 +127,7 @@
                         <div>
                             <label for="zipCode" class="block text-sm font-medium leading-6 text-gray-900">PLZ *</label>
                             <div class="mt-2">
-                                <input type="text" id="zipCode" name="zipCode" value="<%= doctor.zipCode %>" required
+                                <input type="text" id="zipCode" name="zipCode" value="<%= doctor.zipCode %>" required autocomplete="postal-code"
                                     class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                             </div>
                         </div>
@@ -135,7 +135,7 @@
                         <div>
                             <label for="city" class="block text-sm font-medium leading-6 text-gray-900">Stadt *</label>
                             <div class="mt-2">
-                                <input type="text" id="city" name="city" value="<%= doctor.city %>" required
+                                <input type="text" id="city" name="city" value="<%= doctor.city %>" required autocomplete="address-level2"
                                     class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                             </div>
                         </div>
@@ -143,7 +143,7 @@
                         <div>
                             <label for="phone" class="block text-sm font-medium leading-6 text-gray-900">Telefon *</label>
                             <div class="mt-2">
-                                <input type="tel" id="phone" name="phone" value="<%= doctor.phone %>" required
+                                <input type="tel" id="phone" name="phone" value="<%= doctor.phone %>" required autocomplete="tel"
                                     class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                             </div>
                         </div>
@@ -346,10 +346,19 @@
         let retryCount = 0;
         const maxRetries = 2;
         
+        // Define a safe global callback to avoid errors if script loads with callback
+        window.initAutocomplete = function initAutocomplete() {
+            // No-op on this page; fields are manual here
+        };
+
         function loadGoogleMapsAPI() {
             const script = document.createElement('script');
             // Verwende den vom Server gesendeten API-Schlüssel
             const apiKey = "<%= googleMapsApiKey %>";
+            if (!apiKey || apiKey === '') {
+                console.warn('Google Maps API key not set on edit page, skipping load');
+                return;
+            }
             script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initAutocomplete&v=weekly`;
             script.async = true;
             script.defer = true;

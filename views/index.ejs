@@ -33,7 +33,7 @@
 
     <!-- Parallax Image Section -->
     <div class="relative h-[500px] overflow-hidden">
-        <div class="parallax-container w-full h-full bg-center bg-no-repeat bg-cover" style="background-image: url('/uploads/images/doctors-parallax.jpg');">
+        <div class="parallax-container w-full h-full bg-center bg-no-repeat bg-cover" style="background-image: url('/images/doctors-parallax.jpg');">
             <div class="absolute inset-0 bg-indigo-900/10"></div>
         </div>
     </div>
@@ -155,14 +155,20 @@
                                                         <%= doctor.firstName || '' %> <%= doctor.lastName || '' %>
                                                     </td>
                                                     <td class="px-3 py-4 text-sm text-gray-500">
-                                                        <% if (doctor.specialties && doctor.specialties.length > 0) { %>
-                                                            <%= t('specialties.' + (doctor.title === 'Frau' ? 'female.' : 'male.') + doctor.specialties[0].split('.').pop()) %>
-                                                            <% if (doctor.specialties[1]) { %>
-                                                                <br><%= t('specialties.' + (doctor.title === 'Frau' ? 'female.' : 'male.') + doctor.specialties[1].split('.').pop()) %>
-                                                            <% } %>
-                                                        <% } else { %>
-                                                            <%= doctor.originalSpecialty %>
-                                                        <% } %>
+                                                        <% 
+                                                            const specialtyKey = doctor.mainSpecialty || (doctor.specialties && doctor.specialties[0]);
+                                                            let specialtyText = '';
+                                                            if (specialtyKey && typeof specialties !== 'undefined') {
+                                                                const genderKey = doctor.title === 'Frau' ? 'female' : 'male';
+                                                                if (specialties[genderKey] && specialties[genderKey][specialtyKey]) {
+                                                                    specialtyText = specialties[genderKey][specialtyKey];
+                                                                }
+                                                            }
+                                                            if (!specialtyText && doctor.originalSpecialty) {
+                                                                specialtyText = doctor.originalSpecialty;
+                                                            }
+                                                        %>
+                                                        <%= specialtyText || '(Nicht angegeben)' %>
                                                     </td>
                                                     <td class="px-6 py-4 whitespace-nowrap">
                                                         <a href="/doctor/<%= formatNameForUrl(doctor.firstName || '', doctor.lastName || '') %>" 
