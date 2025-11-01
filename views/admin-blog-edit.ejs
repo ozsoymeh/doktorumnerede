@@ -147,8 +147,8 @@
 
                 <script>
                     (function() {
-                        const specialties = <%= JSON.stringify(specialties) %>;
-                        let selectedSpecialties = <%= post && post.specialties && Array.isArray(post.specialties) ? JSON.stringify(post.specialties.filter(s => s !== 'male' && s !== 'female')) : '[]' %>;
+                        const specialties = <%- JSON.stringify(specialties) %>;
+                        let selectedSpecialties = <%- post && post.specialties && Array.isArray(post.specialties) ? JSON.stringify(post.specialties.filter(s => s !== 'male' && s !== 'female')) : '[]' %>;
 
                         function updateSpecialtiesDisplay() {
                             const container = document.getElementById('selectedSpecialties');

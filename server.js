@@ -832,8 +832,19 @@ app.get('/', (req, res) => {
     // Get featured doctors for carousel (all doctors with profile photos, randomized)
     const featuredDoctors = getFeaturedDoctors(doctors);
     
-    // Get blog posts
-    const blogPosts = getBlogPosts().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    // Get blog posts - randomly select 3
+    const allBlogPosts = getBlogPosts();
+    let blogPosts = [];
+    if (allBlogPosts.length > 0) {
+        // Shuffle array for random selection
+        const shuffled = [...allBlogPosts];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        // Take first 3
+        blogPosts = shuffled.slice(0, 3);
+    }
     
     res.render('index', {
         title: 'Doktorum nerede - Avusturya',
@@ -2138,6 +2149,120 @@ app.get('/admin', requireAdmin, (req, res) => {
     const doctors = getDoctors();
     const success = req.query.success || null;
     res.render('admin', { doctors, success });
+});
+
+// Notification Routes (must be before parameterized routes)
+app.get('/admin/notifications', requireAdmin, (req, res) => {
+    const doctors = getDoctors();
+    // Count only registered doctors (excluding admin)
+    const registeredDoctors = doctors.filter(d => !d.isAdmin);
+    const totalDoctors = registeredDoctors.length;
+    const success = req.query.success || null;
+    const error = req.query.error || null;
+    res.render('admin-notifications', { totalDoctors, success, error });
+});
+
+app.post('/admin/notifications/send', requireAdmin, async (req, res) => {
+    try {
+        const { message } = req.body;
+        
+        if (!message || !message.trim()) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Bitte geben Sie eine Nachricht ein.' 
+            });
+        }
+
+        const doctors = getDoctors();
+        // Get all registered doctors (excluding admin)
+        const registeredDoctors = doctors.filter(d => !d.isAdmin && d.email);
+        
+        if (registeredDoctors.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Keine registrierten Ärzte gefunden.' 
+            });
+        }
+
+        // Email subject
+        const subject = 'Benachrichtigung von Doktorum nerede';
+        
+        // Create HTML email template
+        const emailHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; }
+                    .content { background-color: #f9fafb; padding: 20px; }
+                    .message { background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+                    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Doktorum nerede</h1>
+                    </div>
+                    <div class="content">
+                        <div class="message">
+                            ${message.trim().replace(/\n/g, '<br>')}
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <p>Diese Nachricht wurde von der Admin-Seite von Doktorum nerede gesendet.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        // Send emails to all registered doctors
+        let sentCount = 0;
+        let failedCount = 0;
+        const errors = [];
+
+        for (const doctor of registeredDoctors) {
+            try {
+                const emailSent = await sendEmail(doctor.email, subject, emailHtml, message.trim());
+                if (emailSent) {
+                    sentCount++;
+                } else {
+                    failedCount++;
+                    errors.push(doctor.email);
+                }
+            } catch (error) {
+                console.error(`Fehler beim Senden an ${doctor.email}:`, error);
+                failedCount++;
+                errors.push(doctor.email);
+            }
+        }
+
+        // Return success response
+        if (sentCount > 0) {
+            res.json({ 
+                success: true, 
+                sentCount: sentCount,
+                failedCount: failedCount,
+                message: `E-Mail wurde erfolgreich an ${sentCount} ${sentCount === 1 ? 'Arzt' : 'Ärzte'} gesendet.` + 
+                         (failedCount > 0 ? ` ${failedCount} Fehler.` : '')
+            });
+        } else {
+            res.status(500).json({ 
+                success: false, 
+                error: 'Fehler beim Senden der E-Mails. Bitte überprüfen Sie die SMTP-Konfiguration.' 
+            });
+        }
+    } catch (error) {
+        console.error('Fehler beim Senden von Benachrichtigungen:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.' 
+        });
+    }
 });
 
 app.post('/admin/approve/:email', requireAdmin, (req, res) => {
