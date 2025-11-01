@@ -270,7 +270,17 @@
     </div>
 
     <script>
+        // CRITICAL: Immediate log to verify script is loading
+        console.log('========================================');
+        console.log('[EDIT-PROFILE] Script loaded - waiting for DOMContentLoaded...');
+        console.log('[EDIT-PROFILE] Current URL:', window.location.href);
+        console.log('[EDIT-PROFILE] Document title:', document.title);
+        console.log('========================================');
+        
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('========================================');
+            console.log('[EDIT-PROFILE] DOMContentLoaded fired - initializing form handlers...');
+            console.log('========================================');
             const titleHidden = document.getElementById('title');
             const mainSpecialtySelect = document.getElementById('mainSpecialty');
             const secondarySpecialtySelect = document.getElementById('secondarySpecialty');
@@ -314,28 +324,413 @@
             if (noContractCheckbox.checked) {
                 insuranceCheckboxes.forEach(checkbox => checkbox.disabled = true);
             }
-        });
-        
-        // Automatisches Übermitteln des Formulars beim Ändern des Profilfotos
-        const photoInput = document.getElementById('photo');
-        if (photoInput) {
-            photoInput.addEventListener('change', function() {
+            
+            // Prevent form from submitting normally - we'll handle it with fetch
+            const form = document.querySelector('form[action="/profile/edit"]');
+            if (form) {
+                console.log('[CLIENT] Form found, attaching submit handler...');
+                form.addEventListener('submit', function(e) {
+                    // If this is triggered by file input change, let the file handler manage it
+                    // Otherwise prevent default to avoid double submission
+                    const activeElement = document.activeElement;
+                    if (activeElement && activeElement.type === 'file') {
+                        // File input change handler will take care of it
+                        return;
+                    }
+                    // For regular form submission, allow it (but file uploads should use fetch)
+                    const fileInputs = form.querySelectorAll('input[type="file"]');
+                    let hasSelectedFile = false;
+                    fileInputs.forEach(input => {
+                        if (input.files && input.files.length > 0) {
+                            hasSelectedFile = true;
+                        }
+                    });
+                    if (hasSelectedFile) {
+                        // File upload in progress - prevent normal submission
+                        e.preventDefault();
+                        console.log('[CLIENT] Prevented form default submission - file upload detected');
+                    }
+                });
+            } else {
+                console.error('[CLIENT] Form not found!');
+            }
+            
+            // Automatisches Übermitteln des Formulars beim Ändern des Profilfotos
+            console.log('[CLIENT] Looking for photo input...');
+            const photoInput = document.getElementById('photo');
+            if (photoInput) {
+                console.log('[CLIENT] Photo input found, attaching change event listener...');
+            photoInput.addEventListener('change', function(e) {
+                // Prevent any default behavior
+                e.preventDefault();
+                e.stopPropagation();
+                
                 if (this.files.length > 0) {
-                    this.closest('form').submit();
+                    const file = this.files[0];
+                    console.log('[CLIENT] ===== PHOTO INPUT CHANGE EVENT =====');
+                    console.log('[CLIENT] Photo file selected:', file.name, file.size, file.type);
+                    
+                    // Validate file type
+                    if (!file.type.match(/^image\/(jpeg|jpg|png)$/i)) {
+                        alert('Nur JPG, JPEG und PNG Dateien sind erlaubt!');
+                        this.value = '';
+                        return;
+                    }
+                    
+                    // Validate file size (4MB)
+                    if (file.size > 4 * 1024 * 1024) {
+                        alert('Die Datei ist zu groß. Maximal 4MB erlaubt.');
+                        this.value = '';
+                        return;
+                    }
+                    
+                    // Submit form using FormData and fetch to ensure proper multipart encoding
+                    const form = this.closest('form');
+                    if (form) {
+                        console.log('Submitting form for photo upload...');
+                        console.log('Form action:', form.action);
+                        console.log('Form method:', form.method);
+                        console.log('File input name:', this.name);
+                        console.log('File input files:', this.files.length);
+                        
+                        // Get the file FIRST before doing anything else
+                        const fileToUpload = this.files[0];
+                        if (!fileToUpload) {
+                            console.error('[CLIENT] ERROR: No file selected!');
+                            alert('Bitte wählen Sie ein Foto aus.');
+                            return;
+                        }
+                        
+                        console.log('[CLIENT] ===== PHOTO UPLOAD START =====');
+                        console.log('[CLIENT] File details:', {
+                            name: fileToUpload.name,
+                            size: fileToUpload.size,
+                            type: fileToUpload.type,
+                            lastModified: fileToUpload.lastModified
+                        });
+                        console.log('[CLIENT] File input name:', this.name);
+                        console.log('[CLIENT] File input id:', this.id);
+                        
+                        // Create FormData - add file FIRST and EXPLICITLY
+                        const formData = new FormData();
+                        
+                        // STEP 1: Add the photo file FIRST with exact field name 'photo'
+                        formData.append('photo', fileToUpload, fileToUpload.name);
+                        console.log('[CLIENT] Step 1: Added photo file with field name "photo"');
+                        
+                        // STEP 2: Add all other form fields
+                        const formInputs = form.querySelectorAll('input:not([type="file"]), textarea, select');
+                        let fieldsAdded = 0;
+                        formInputs.forEach(input => {
+                            if (input.type === 'checkbox') {
+                                if (input.checked && input.name) {
+                                    formData.append(input.name, input.value || 'on');
+                                    fieldsAdded++;
+                                }
+                            } else if (input.type === 'radio') {
+                                if (input.checked && input.name) {
+                                    formData.append(input.name, input.value);
+                                    fieldsAdded++;
+                                }
+                            } else if (input.name && input.value !== '' && input.type !== 'file') {
+                                formData.append(input.name, input.value);
+                                fieldsAdded++;
+                            }
+                        });
+                        console.log(`[CLIENT] Step 2: Added ${fieldsAdded} form fields`);
+                        
+                        // STEP 3: Verify file is in FormData
+                        console.log('[CLIENT] Step 3: Verifying FormData contents...');
+                        let fileCount = 0;
+                        let photoFound = false;
+                        for (let pair of formData.entries()) {
+                            if (pair[1] instanceof File) {
+                                fileCount++;
+                                console.log(`  [FILE ${fileCount}] Field: "${pair[0]}", File: ${pair[1].name}, Size: ${pair[1].size} bytes`);
+                                if (pair[0] === 'photo') {
+                                    photoFound = true;
+                                }
+                            }
+                        }
+                        
+                        console.log(`[CLIENT] FormData verification: ${fileCount} file(s) found, photo field: ${photoFound ? 'YES ✓' : 'NO ✗'}`);
+                        
+                        if (!photoFound) {
+                            console.error('[CLIENT] CRITICAL: Photo file missing from FormData!');
+                            alert('Fehler: Datei konnte nicht hinzugefügt werden. Bitte Seite neu laden und erneut versuchen.');
+                            return;
+                        }
+                        
+                        console.log('[CLIENT] ===== READY TO UPLOAD =====');
+                        
+                        // Add loading indicator
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        const originalBtnText = submitBtn ? submitBtn.textContent : '';
+                        if (submitBtn) {
+                            submitBtn.disabled = true;
+                            submitBtn.textContent = 'Hochladen...';
+                        }
+                        
+                        // Submit using fetch - DO NOT redirect/reload until upload completes
+                        console.log('[CLIENT] ===== STARTING FETCH UPLOAD =====');
+                        const startTime = Date.now();
+                        
+                        fetch(form.action, {
+                            method: 'POST',
+                            body: formData,
+                            credentials: 'same-origin' // Include cookies for session
+                        })
+                        .then(async response => {
+                            const elapsed = Date.now() - startTime;
+                            console.log(`[CLIENT] ===== FETCH RESPONSE (${elapsed}ms) =====`);
+                            console.log('[CLIENT] Response status:', response.status);
+                            console.log('[CLIENT] Response statusText:', response.statusText);
+                            console.log('[CLIENT] Response redirected:', response.redirected);
+                            console.log('[CLIENT] Response ok:', response.ok);
+                            console.log('[CLIENT] Response type:', response.type);
+                            console.log('[CLIENT] Response url:', response.url);
+                            
+                            // Wait 2 seconds before redirecting to ensure logs are visible
+                            console.log('[CLIENT] Waiting 2 seconds before redirect to preserve console logs...');
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            
+                            if (response.status === 302 || response.redirected) {
+                                const redirectUrl = response.headers.get('Location') || response.url;
+                                console.log('[CLIENT] Redirecting to:', redirectUrl);
+                                window.location.href = redirectUrl;
+                            } else if (response.ok) {
+                                console.log('[CLIENT] Response OK - reloading page...');
+                                window.location.reload();
+                            } else {
+                                const errorText = await response.text().catch(() => 'No details');
+                                console.error('[CLIENT] Upload failed:', response.status, errorText);
+                                alert('Fehler beim Hochladen: ' + response.statusText + '\n\nStatus: ' + response.status);
+                                if (submitBtn) {
+                                    submitBtn.disabled = false;
+                                    submitBtn.textContent = originalBtnText;
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('[CLIENT] ===== FETCH ERROR =====');
+                            console.error('[CLIENT] Error type:', error.name);
+                            console.error('[CLIENT] Error message:', error.message);
+                            console.error('[CLIENT] Error stack:', error.stack);
+                            alert('Fehler beim Hochladen: ' + error.message + '\n\nBitte Browser-Konsole öffnen (F12) für Details.');
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.textContent = originalBtnText;
+                            }
+                        });
+                    } else {
+                        console.error('Form not found!');
+                        alert('Fehler: Formular nicht gefunden. Bitte Seite neu laden.');
+                    }
                 }
             });
-        }
-        
-        // Automatisches Übermitteln des Formulars beim Hochladen von Ordinationsfotos
-        const galleryInput = document.getElementById('galleryPhotos');
-        if (galleryInput) {
-            galleryInput.addEventListener('change', function() {
+            } else {
+                console.error('[CLIENT] Photo input not found!');
+            }
+            
+            // Automatisches Übermitteln des Formulars beim Hochladen von Ordinationsfotos
+            console.log('[EDIT-PROFILE] Looking for gallery input...');
+            console.log('[EDIT-PROFILE] Searching for element with id="galleryPhotos"');
+            const galleryInput = document.getElementById('galleryPhotos');
+            console.log('[EDIT-PROFILE] getElementById result:', galleryInput);
+            
+            // Also try querySelector
+            const galleryInputQuery = document.querySelector('#galleryPhotos');
+            console.log('[EDIT-PROFILE] querySelector result:', galleryInputQuery);
+            
+            // List all file inputs
+            const allFileInputs = document.querySelectorAll('input[type="file"]');
+            console.log('[EDIT-PROFILE] All file inputs found:', allFileInputs.length);
+            allFileInputs.forEach((input, index) => {
+                console.log(`[EDIT-PROFILE] File input ${index + 1}: id="${input.id}", name="${input.name}"`);
+            });
+            
+            if (galleryInput) {
+                console.log('[EDIT-PROFILE] ✓ Gallery input found! Attaching change event listener...');
+            galleryInput.addEventListener('change', function(e) {
+                // Prevent any default behavior
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('[CLIENT] ===== GALLERY INPUT CHANGE EVENT =====');
+                console.log('[CLIENT] Files selected:', this.files.length);
+                
                 if (this.files.length > 0) {
-                    this.closest('form').submit();
+                    console.log('[CLIENT] ===== GALLERY PHOTOS SELECTED =====');
+                    console.log('[CLIENT] Gallery photos count:', this.files.length);
+                    
+                    // Validate each file
+                    for (let i = 0; i < this.files.length; i++) {
+                        const file = this.files[i];
+                        console.log(`Gallery file ${i + 1}:`, file.name, file.size, file.type);
+                        
+                        // Validate file type
+                        if (!file.type.match(/^image\/(jpeg|jpg|png)$/i)) {
+                            alert(`Datei "${file.name}" ist kein gültiges Bildformat. Nur JPG, JPEG und PNG sind erlaubt.`);
+                            this.value = '';
+                            return;
+                        }
+                        
+                        // Validate file size (4MB)
+                        if (file.size > 4 * 1024 * 1024) {
+                            alert(`Datei "${file.name}" ist zu groß. Maximal 4MB erlaubt.`);
+                            this.value = '';
+                            return;
+                        }
+                    }
+                    
+                    // Submit form using FormData and fetch
+                    const form = this.closest('form');
+                    if (form) {
+                        console.log('[CLIENT] ===== GALLERY UPLOAD START =====');
+                        console.log('[CLIENT] Form action:', form.action);
+                        console.log('[CLIENT] Form method:', form.method);
+                        console.log('[CLIENT] File input name:', this.name);
+                        console.log('[CLIENT] File input id:', this.id);
+                        console.log('[CLIENT] File input files:', this.files.length);
+                        
+                        // Get files FIRST before doing anything else
+                        const filesToUpload = Array.from(this.files);
+                        console.log('[CLIENT] Files to upload:', filesToUpload.map(f => ({
+                            name: f.name,
+                            size: f.size,
+                            type: f.type
+                        })));
+                        
+                        // Create FormData - add files FIRST and EXPLICITLY
+                        const formData = new FormData();
+                        
+                        // STEP 1: Add gallery photo files FIRST with exact field name 'galleryPhotos'
+                        filesToUpload.forEach((file, index) => {
+                            formData.append('galleryPhotos', file, file.name);
+                            console.log(`[CLIENT] Step 1: Added gallery photo ${index + 1} with field name "galleryPhotos"`);
+                        });
+                        
+                        // STEP 2: Add all other form fields
+                        const formInputs = form.querySelectorAll('input:not([type="file"]), textarea, select');
+                        let fieldsAdded = 0;
+                        formInputs.forEach(input => {
+                            if (input.type === 'checkbox') {
+                                if (input.checked && input.name) {
+                                    formData.append(input.name, input.value || 'on');
+                                    fieldsAdded++;
+                                }
+                            } else if (input.type === 'radio') {
+                                if (input.checked && input.name) {
+                                    formData.append(input.name, input.value);
+                                    fieldsAdded++;
+                                }
+                            } else if (input.name && input.value !== '' && input.type !== 'file') {
+                                formData.append(input.name, input.value);
+                                fieldsAdded++;
+                            }
+                        });
+                        console.log(`[CLIENT] Step 2: Added ${fieldsAdded} form fields`);
+                        
+                        // STEP 3: Verify files are in FormData
+                        console.log('[CLIENT] Step 3: Verifying FormData contents...');
+                        let fileCount = 0;
+                        let galleryFound = false;
+                        for (let pair of formData.entries()) {
+                            if (pair[1] instanceof File) {
+                                fileCount++;
+                                console.log(`  [FILE ${fileCount}] Field: "${pair[0]}", File: ${pair[1].name}, Size: ${pair[1].size} bytes`);
+                                if (pair[0] === 'galleryPhotos') {
+                                    galleryFound = true;
+                                }
+                            }
+                        }
+                        
+                        console.log(`[CLIENT] FormData verification: ${fileCount} file(s) found, galleryPhotos field: ${galleryFound ? 'YES ✓' : 'NO ✗'}`);
+                        
+                        if (!galleryFound || fileCount === 0) {
+                            console.error('[CLIENT] CRITICAL: Gallery photos missing from FormData!');
+                            alert('Fehler: Fotos konnten nicht hinzugefügt werden. Bitte Seite neu laden und erneut versuchen.');
+                            return;
+                        }
+                        
+                        console.log('[CLIENT] ===== READY TO UPLOAD GALLERY =====');
+                        
+                        // Add loading indicator
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        const originalBtnText = submitBtn ? submitBtn.textContent : '';
+                        if (submitBtn) {
+                            submitBtn.disabled = true;
+                            submitBtn.textContent = 'Hochladen...';
+                        }
+                        
+                        // Submit using fetch - DO NOT redirect/reload until upload completes
+                        console.log('[CLIENT] ===== STARTING GALLERY FETCH UPLOAD =====');
+                        const startTime = Date.now();
+                        
+                        fetch(form.action, {
+                            method: 'POST',
+                            body: formData,
+                            credentials: 'same-origin' // Include cookies for session
+                        })
+                        .then(async response => {
+                            const elapsed = Date.now() - startTime;
+                            console.log(`[CLIENT] ===== GALLERY FETCH RESPONSE (${elapsed}ms) =====`);
+                            console.log('[CLIENT] Response status:', response.status);
+                            console.log('[CLIENT] Response statusText:', response.statusText);
+                            console.log('[CLIENT] Response redirected:', response.redirected);
+                            console.log('[CLIENT] Response ok:', response.ok);
+                            console.log('[CLIENT] Response type:', response.type);
+                            console.log('[CLIENT] Response url:', response.url);
+                            
+                            // Wait 2 seconds before redirecting
+                            console.log('[CLIENT] Waiting 2 seconds before redirect to preserve console logs...');
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            
+                            if (response.status === 302 || response.redirected) {
+                                const redirectUrl = response.headers.get('Location') || response.url;
+                                console.log('[CLIENT] Redirecting to:', redirectUrl);
+                                window.location.href = redirectUrl;
+                            } else if (response.ok) {
+                                console.log('[CLIENT] Response OK - reloading page...');
+                                window.location.reload();
+                            } else {
+                                const errorText = await response.text().catch(() => 'No details');
+                                console.error('[CLIENT] Gallery upload failed:', response.status, errorText);
+                                alert('Fehler beim Hochladen: ' + response.statusText + '\n\nStatus: ' + response.status);
+                                if (submitBtn) {
+                                    submitBtn.disabled = false;
+                                    submitBtn.textContent = originalBtnText;
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('[CLIENT] ===== GALLERY FETCH ERROR =====');
+                            console.error('[CLIENT] Error type:', error.name);
+                            console.error('[CLIENT] Error message:', error.message);
+                            console.error('[CLIENT] Error stack:', error.stack);
+                            alert('Fehler beim Hochladen: ' + error.message + '\n\nBitte Browser-Konsole öffnen (F12) für Details.');
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.textContent = originalBtnText;
+                            }
+                        });
+                    } else {
+                        console.error('[CLIENT] Form not found!');
+                        alert('Fehler: Formular nicht gefunden. Bitte Seite neu laden.');
+                    }
+                } else {
+                    console.error('[CLIENT] No files selected in gallery input!');
                 }
             });
-        }
-
+                console.log('[CLIENT] Gallery input event listener attached successfully');
+            } else {
+                console.error('[CLIENT] Gallery photos input element not found!');
+                console.error('[CLIENT] Available inputs:', Array.from(document.querySelectorAll('input[type="file"]')).map(i => ({id: i.id, name: i.name})));
+            }
+            
+            console.log('[CLIENT] All form handlers initialized');
+        }); // End DOMContentLoaded
+        
         // API nachladen
         let retryCount = 0;
         const maxRetries = 2;

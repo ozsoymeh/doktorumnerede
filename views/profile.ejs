@@ -743,6 +743,201 @@
 
         // Initialize character count on page load
         updateCharCount();
+        
+        // Gallery photo upload handler
+        console.log('[PROFILE] Looking for gallery input...');
+        const galleryInput = document.getElementById('galleryPhotos');
+        if (galleryInput) {
+            console.log('[PROFILE] ✓ Gallery input found! Attaching change event listener...');
+            galleryInput.addEventListener('change', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('[PROFILE] ===== GALLERY INPUT CHANGE EVENT =====');
+                console.log('[PROFILE] Files selected:', this.files.length);
+                
+                if (this.files.length > 0) {
+                    console.log('[PROFILE] ===== GALLERY PHOTOS SELECTED =====');
+                    
+                    // Validate each file
+                    for (let i = 0; i < this.files.length; i++) {
+                        const file = this.files[i];
+                        if (!file.type.match(/^image\/(jpeg|jpg|png)$/i)) {
+                            alert(`Datei "${file.name}" ist kein gültiges Bildformat. Nur JPG, JPEG und PNG sind erlaubt.`);
+                            this.value = '';
+                            return;
+                        }
+                        if (file.size > 4 * 1024 * 1024) {
+                            alert(`Datei "${file.name}" ist zu groß. Maximal 4MB erlaubt.`);
+                            this.value = '';
+                            return;
+                        }
+                    }
+                    
+                    // Get the form
+                    const form = this.closest('form');
+                    if (form) {
+                        console.log('[PROFILE] ===== GALLERY UPLOAD START =====');
+                        
+                        // Get files FIRST
+                        const filesToUpload = Array.from(this.files);
+                        
+                        // Create FormData - add files FIRST
+                        const formData = new FormData();
+                        filesToUpload.forEach((file, index) => {
+                            formData.append('galleryPhotos', file, file.name);
+                            console.log(`[PROFILE] Added gallery photo ${index + 1}: ${file.name}`);
+                        });
+                        
+                        // Add all other form fields
+                        const formInputs = form.querySelectorAll('input:not([type="file"]), textarea, select');
+                        formInputs.forEach(input => {
+                            if (input.type === 'checkbox' && input.checked && input.name) {
+                                formData.append(input.name, input.value || 'on');
+                            } else if (input.type === 'radio' && input.checked && input.name) {
+                                formData.append(input.name, input.value);
+                            } else if (input.name && input.value !== '' && input.type !== 'file') {
+                                formData.append(input.name, input.value);
+                            }
+                        });
+                        
+                        // Verify files in FormData
+                        let fileCount = 0;
+                        for (let pair of formData.entries()) {
+                            if (pair[1] instanceof File) {
+                                fileCount++;
+                                console.log(`[PROFILE] FormData has file: ${pair[0]} = ${pair[1].name}`);
+                            }
+                        }
+                        console.log(`[PROFILE] FormData has ${fileCount} file(s)`);
+                        
+                        if (fileCount === 0) {
+                            alert('Fehler: Fotos konnten nicht hinzugefügt werden.');
+                            return;
+                        }
+                        
+                        console.log('[PROFILE] ===== STARTING FETCH UPLOAD =====');
+                        console.log('[PROFILE] Form action URL:', form.action);
+                        console.log('[PROFILE] Current page URL:', window.location.href);
+                        console.log('[PROFILE] FormData has', fileCount, 'file(s)');
+                        
+                        const startTime = Date.now();
+                        
+                        // Use redirect: 'follow' (default) so fetch follows redirects
+                        // Set a longer timeout for large file uploads (image processing can take time)
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+                        
+                        fetch(form.action, {
+                            method: 'POST',
+                            body: formData,
+                            credentials: 'same-origin',
+                            redirect: 'follow', // Follow redirects automatically
+                            signal: controller.signal,
+                            // Keep connection alive
+                            keepalive: true
+                        })
+                        .then(async response => {
+                            clearTimeout(timeoutId); // Clear timeout since we got a response
+                            const elapsed = Date.now() - startTime;
+                            console.log(`[PROFILE] ===== FETCH RESPONSE RECEIVED (${elapsed}ms) =====`);
+                            console.log('[PROFILE] Status:', response.status);
+                            console.log('[PROFILE] Status Text:', response.statusText);
+                            console.log('[PROFILE] URL:', response.url);
+                            console.log('[PROFILE] Redirected:', response.redirected);
+                            console.log('[PROFILE] Type:', response.type);
+                            console.log('[PROFILE] OK:', response.ok);
+                            
+                            // Check if response is actually successful
+                            if (!response.ok && response.status !== 302) {
+                                const errorText = await response.text().catch(() => 'No error details');
+                                console.error('[PROFILE] Server returned error status:', response.status);
+                                console.error('[PROFILE] Error response:', errorText);
+                                throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                            }
+                            
+                            // Success! Wait 3 seconds so user can see the logs
+                            console.log('[PROFILE] ✓ Upload successful! Waiting 3 seconds before reload...');
+                            console.log('[PROFILE] Check the console logs above for details.');
+                            await new Promise(resolve => setTimeout(resolve, 3000));
+                            
+                            // Reload to show success message from server
+                            console.log('[PROFILE] Reloading page to show success message...');
+                            window.location.reload();
+                        })
+                        .catch(error => {
+                            clearTimeout(timeoutId); // Clear timeout
+                            
+                            // Log error immediately - don't hide it
+                            console.error('========================================');
+                            console.error('[PROFILE] ===== FETCH ERROR =====');
+                            console.error('[PROFILE] Error name:', error.name);
+                            console.error('[PROFILE] Error message:', error.message);
+                            console.error('[PROFILE] Error stack:', error.stack);
+                            console.error('========================================');
+                            
+                            if (error.name === 'AbortError') {
+                                console.error('[PROFILE] Request was aborted/timed out');
+                                console.error('[PROFILE] This might mean:');
+                                console.error('[PROFILE] 1. File processing took too long (>60 seconds)');
+                                console.error('[PROFILE] 2. Connection was lost');
+                                console.error('[PROFILE] 3. Server crashed during processing');
+                                console.error('[PROFILE] The file MAY have been uploaded - checking in 5 seconds...');
+                                
+                                // Wait 5 seconds before checking (to see console logs)
+                                setTimeout(() => {
+                                    console.log('[PROFILE] Reloading page to check if upload succeeded...');
+                                    window.location.reload();
+                                }, 5000);
+                                return; // Don't continue with error handling
+                            }
+                            console.error('[PROFILE] Form action was:', form.action);
+                            console.error('[PROFILE] Request details:', {
+                                url: form.action,
+                                method: 'POST',
+                                hasFormData: !!formData,
+                                fileCount: fileCount,
+                                elapsedTime: Date.now() - startTime
+                            });
+                            
+                            let errorMsg = 'Fehler beim Hochladen: ';
+                            if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                                errorMsg += 'Verbindungsfehler. Der Server antwortet nicht.';
+                                console.error('[PROFILE] Network error detected - check server logs');
+                                console.error('[PROFILE] This could mean:');
+                                console.error('[PROFILE] 1. Server is not responding');
+                                console.error('[PROFILE] 2. Request is timing out');
+                                console.error('[PROFILE] 3. Server crashed during processing');
+                                console.error('[PROFILE] 4. Network/CORS issue');
+                                console.error('[PROFILE] Please check server logs: pm2 logs doktorum-nerede');
+                            } else {
+                                errorMsg += error.message;
+                            }
+                            
+                            // Show NON-BLOCKING notification that doesn't auto-close
+                            // And DON'T reload immediately - let user see the error
+                            const errorDiv = document.createElement('div');
+                            errorDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; padding: 16px; border-radius: 8px; z-index: 10000; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);';
+                            errorDiv.innerHTML = `
+                                <strong>Upload-Fehler</strong><br>
+                                ${errorMsg}<br>
+                                <small>Bitte Browser-Konsole (F12) für Details öffnen.</small><br>
+                                <button onclick="this.parentElement.remove()" style="margin-top: 8px; padding: 6px 12px; background: white; color: #ef4444; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Schließen</button>
+                                <button onclick="window.location.reload()" style="margin-top: 8px; margin-left: 8px; padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">Seite neu laden</button>
+                            `;
+                            document.body.appendChild(errorDiv);
+                            
+                            // Don't auto-reload - let user decide
+                            console.error('[PROFILE] Error notification shown. Page will NOT auto-reload.');
+                            console.error('[PROFILE] User can manually reload or check if file was uploaded.');
+                        });
+                    }
+                }
+            });
+            console.log('[PROFILE] Gallery input event listener attached successfully');
+        } else {
+            console.error('[PROFILE] Gallery photos input element not found!');
+        }
 
         // Show SweetAlert2 message if there's a session message
         <% if (message) { %>

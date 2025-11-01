@@ -1,5 +1,5 @@
 <% if (featuredDoctors && featuredDoctors.length > 0) { %>
-<section class="py-16 sm:py-20 lg:py-24 pb-20 sm:pb-20 lg:pb-24 relative bg-cover bg-center bg-no-repeat transition-opacity duration-500 min-h-[1800px] sm:min-h-0" style="background-image: url('/images/section_background_dark02.jpg');">
+<section class="featured-doctors-section py-16 sm:py-20 lg:py-24 pb-20 sm:pb-20 lg:pb-24 relative bg-cover bg-center bg-no-repeat transition-opacity duration-500 min-h-[1800px] sm:min-h-0 overflow-x-hidden w-full" style="background-image: url('/images/section_background_dark02.jpg');">
     <!-- Overlay for better text readability -->
     <div class="absolute inset-0 bg-black/40"></div>
     
@@ -12,9 +12,9 @@
         </div>
 
         <!-- Grid Container with padding to prevent cutting - higher min-height on mobile for vertical stacking -->
-        <div class="relative min-h-[1600px] sm:min-h-[600px] max-h-none sm:max-h-[800px] py-8 pb-20 sm:pb-8 overflow-visible sm:overflow-hidden">
+        <div class="relative min-h-[1600px] sm:min-h-[600px] max-h-none sm:max-h-[800px] py-8 pb-20 sm:pb-8 overflow-hidden w-full">
             <!-- Carousel Container with swipe transition -->
-            <div class="doctors-carousel-container relative">
+            <div class="doctors-carousel-container relative w-full overflow-hidden">
                 <!-- Grid Wrapper - Render all groups, swipe with JS -->
                 <% 
                 const doctorsPerView = 3;
@@ -24,7 +24,7 @@
                     const endIndex = Math.min(startIndex + doctorsPerView, featuredDoctors.length);
                     const groupDoctors = featuredDoctors.slice(startIndex, endIndex);
                 %>
-                <div class="doctors-group flex flex-col sm:flex-row justify-center items-center sm:items-start gap-4 sm:gap-6 overflow-visible max-w-[1200px] mx-auto px-4 absolute inset-0 transition-transform duration-500 ease-in-out transition-opacity duration-500" 
+                <div class="doctors-group flex flex-col sm:flex-row justify-center items-center sm:items-start gap-4 sm:gap-6 max-w-[1200px] mx-auto px-4 absolute inset-0 transition-transform duration-500 ease-in-out transition-opacity duration-500 w-full" 
                      data-group="<%= groupIndex %>"
                      data-initial-index="<%= groupIndex %>"
                      style="<%= groupIndex === 0 ? 'transform: translateX(0%); opacity: 1; pointer-events: auto;' : 'transform: translateX(100%); opacity: 0; pointer-events: none;' %>">
@@ -104,7 +104,9 @@
 .doctors-carousel-container {
     position: relative;
     width: 100%;
+    max-width: 100%;
     min-height: 1400px; /* Taller on mobile for stacked boxes */
+    overflow: hidden;
 }
 
 @media (min-width: 640px) {
@@ -115,10 +117,20 @@
 
 .doctors-group {
     will-change: transform, opacity;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .doctors-group.transitioning {
     transition: transform 500ms ease-in-out, opacity 500ms ease-in-out;
+}
+
+/* Ensure this section doesn't overflow on mobile */
+.featured-doctors-section {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 </style>
 

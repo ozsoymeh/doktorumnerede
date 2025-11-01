@@ -720,7 +720,19 @@ function saveBlogPosts(posts) {
 
 // Routes
 app.get('/', (req, res) => {
-    const { name, specialty, city, zipCode } = req.query;
+    const { name, city, zipCode } = req.query;
+    // Handle specialty separately - Express query parser doesn't auto-create arrays
+    // So we need to check if specialty is already an array, or if we need to collect all specialty params
+    let specialty = req.query.specialty;
+    // If it's not already an array, check if there are multiple specialty values in the raw query
+    if (!Array.isArray(specialty) && typeof specialty === 'string') {
+        // Check raw query string for multiple specialty parameters
+        const rawQuery = req.url.split('?')[1] || '';
+        const specialtyMatches = rawQuery.match(/specialty=([^&]+)/g) || [];
+        if (specialtyMatches.length > 1) {
+            specialty = specialtyMatches.map(match => decodeURIComponent(match.split('=')[1]));
+        }
+    }
     const doctors = getDoctors().filter(doctor => !doctor.isAdmin && doctor.isApproved);
     
     // Extrahiere einzigartige PLZ und Städte (normalisiert, um Duplikate zu vermeiden)
@@ -760,10 +772,17 @@ app.get('/', (req, res) => {
         } else if (typeof specialty === 'string') {
             specialtyArray = specialty.split(',').map(s => s.trim()).filter(s => s);
         }
+        
+        // Debug logging (remove in production)
+        console.log('Specialty filter - input:', specialty, 'type:', typeof specialty, 'isArray:', Array.isArray(specialty));
+        console.log('Specialty filter - parsed array:', specialtyArray);
+        
         if (specialtyArray.length > 0) {
+            const beforeCount = filteredDoctors.length;
             filteredDoctors = filteredDoctors.filter(doctor => 
                 doctor.specialties && specialtyArray.some(spec => doctor.specialties.includes(spec))
             );
+            console.log('Specialty filter - before:', beforeCount, 'after:', filteredDoctors.length);
         }
     }
 
