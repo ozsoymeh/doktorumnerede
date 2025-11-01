@@ -34,7 +34,8 @@
         "privateOnly": "Nur Wahlarzt",
         "additionalInfo": "Zusätzliche Informationen",
         "location": "Standort",
-        "clickMapForDirections": "Klicken Sie auf die Karte, um die Route zu planen"
+        "clickMapForDirections": "Klicken Sie auf die Karte, um die Route zu planen",
+        "gallery": "Bildergalerie"
     },
     "specialties": {
         "male": {

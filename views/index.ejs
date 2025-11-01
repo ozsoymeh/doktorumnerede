@@ -187,7 +187,8 @@
                                         nextParams.set('page', currentPage + 1);
                                     %>
                                     <% if (currentPage > 1) { %>
-                                        <a href="?<%= prevParams.toString() %>" 
+                                        <a href="?<%= prevParams.toString() %>#search" 
+                                           onclick="event.preventDefault(); window.location.href = '?<%= prevParams.toString() %>#search'; const searchEl = document.getElementById('search'); if (searchEl) { setTimeout(() => searchEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100); }"
                                            class="relative inline-flex items-center px-4 py-2 border-2 border-blue-600 text-base font-bold rounded-lg text-blue-600 bg-white hover:bg-blue-50 transition-colors">
                                             <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                                 <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
@@ -203,7 +204,8 @@
                                         </span>
                                     <% } %>
                                     <% if (currentPage < totalPages) { %>
-                                        <a href="?<%= nextParams.toString() %>" 
+                                        <a href="?<%= nextParams.toString() %>#search" 
+                                           onclick="event.preventDefault(); window.location.href = '?<%= nextParams.toString() %>#search'; const searchEl = document.getElementById('search'); if (searchEl) { setTimeout(() => searchEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100); }"
                                            class="relative inline-flex items-center px-4 py-2 border-2 border-blue-600 text-base font-bold rounded-lg text-blue-600 bg-white hover:bg-blue-50 transition-colors">
                                             <%= lang === 'tr' ? 'Sonraki' : 'Weiter' %>
                                             <svg class="h-5 w-5 ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -241,7 +243,8 @@
                                                 nextNavParams.set('page', currentPage + 1);
                                             %>
                                             <% if (currentPage > 1) { %>
-                                                <a href="?<%= prevNavParams.toString() %>" 
+                                                <a href="?<%= prevNavParams.toString() %>#search" 
+                                                   onclick="event.preventDefault(); window.location.href = '?<%= prevNavParams.toString() %>#search'; const searchEl = document.getElementById('search'); if (searchEl) { setTimeout(() => searchEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100); }"
                                                    class="relative inline-flex items-center px-3 py-2 rounded-l-md border-2 border-gray-300 bg-white text-base font-bold text-gray-700 hover:bg-gray-50 hover:border-blue-600 hover:text-blue-600 transition-all">
                                                     <span class="sr-only"><%= lang === 'tr' ? 'Önceki' : 'Vorherige' %></span>
                                                     <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -278,7 +281,8 @@
                                                         <%= i %>
                                                     </span>
                                                 <% } else { %>
-                                                    <a href="?<%= pageParams.toString() %>" 
+                                                    <a href="?<%= pageParams.toString() %>#search" 
+                                                       onclick="event.preventDefault(); window.location.href = '?<%= pageParams.toString() %>#search'; const searchEl = document.getElementById('search'); if (searchEl) { setTimeout(() => searchEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100); }"
                                                        class="relative inline-flex items-center px-4 py-2 border-2 border-gray-300 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-blue-600 hover:text-blue-600 transition-all">
                                                         <%= i %>
                                                     </a>
@@ -286,7 +290,8 @@
                                             <% } %>
                                             
                                             <% if (currentPage < totalPages) { %>
-                                                <a href="?<%= nextNavParams.toString() %>" 
+                                                <a href="?<%= nextNavParams.toString() %>#search" 
+                                                   onclick="event.preventDefault(); window.location.href = '?<%= nextNavParams.toString() %>#search'; const searchEl = document.getElementById('search'); if (searchEl) { setTimeout(() => searchEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100); }"
                                                    class="relative inline-flex items-center px-3 py-2 rounded-r-md border-2 border-gray-300 bg-white text-base font-bold text-gray-700 hover:bg-gray-50 hover:border-blue-600 hover:text-blue-600 transition-all">
                                                     <span class="sr-only"><%= lang === 'tr' ? 'Sonraki' : 'Nächste' %></span>
                                                     <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -332,5 +337,32 @@
             </div>
         </div>
     </footer>
+
+    <script>
+        // Handle scroll to search section when hash is present or after navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if we have a hash pointing to search
+            if (window.location.hash === '#search') {
+                const searchEl = document.getElementById('search');
+                if (searchEl) {
+                    setTimeout(() => {
+                        searchEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                }
+            }
+        });
+        
+        // Also handle hash change events
+        window.addEventListener('hashchange', function() {
+            if (window.location.hash === '#search') {
+                const searchEl = document.getElementById('search');
+                if (searchEl) {
+                    setTimeout(() => {
+                        searchEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                }
+            }
+        });
+    </script>
 </body>
 </html>

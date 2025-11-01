@@ -1,5 +1,5 @@
 <% if (featuredDoctors && featuredDoctors.length > 0) { %>
-<section class="py-16 sm:py-20 lg:py-24 pb-20 sm:pb-20 lg:pb-24 relative bg-cover bg-center bg-no-repeat transition-opacity duration-500" style="background-image: url('/images/section_background_dark02.jpg');">
+<section class="py-16 sm:py-20 lg:py-24 pb-20 sm:pb-20 lg:pb-24 relative bg-cover bg-center bg-no-repeat transition-opacity duration-500 min-h-[1800px] sm:min-h-0" style="background-image: url('/images/section_background_dark02.jpg');">
     <!-- Overlay for better text readability -->
     <div class="absolute inset-0 bg-black/40"></div>
     
@@ -11,18 +11,23 @@
             </h2>
         </div>
 
-        <!-- Grid Container with padding to prevent cutting - higher max-height on mobile for vertical stacking -->
-        <div class="relative max-h-[1400px] sm:max-h-[800px] py-8 pb-16 sm:pb-8">
-            <!-- Grid Wrapper - Render all groups, show/hide with JS -->
-            <% 
-            const doctorsPerView = 3;
-            const maxGroups = Math.ceil(featuredDoctors.length / doctorsPerView);
-            for (let groupIndex = 0; groupIndex < maxGroups; groupIndex++) {
-                const startIndex = groupIndex * doctorsPerView;
-                const endIndex = Math.min(startIndex + doctorsPerView, featuredDoctors.length);
-                const groupDoctors = featuredDoctors.slice(startIndex, endIndex);
-            %>
-            <div class="doctors-group flex flex-col sm:flex-row justify-center items-center sm:items-start gap-4 sm:gap-6 overflow-visible max-w-[1200px] mx-auto px-4 <%= groupIndex === 0 ? '' : 'hidden' %>" data-group="<%= groupIndex %>">
+        <!-- Grid Container with padding to prevent cutting - higher min-height on mobile for vertical stacking -->
+        <div class="relative min-h-[1600px] sm:min-h-[600px] max-h-none sm:max-h-[800px] py-8 pb-20 sm:pb-8 overflow-visible sm:overflow-hidden">
+            <!-- Carousel Container with swipe transition -->
+            <div class="doctors-carousel-container relative">
+                <!-- Grid Wrapper - Render all groups, swipe with JS -->
+                <% 
+                const doctorsPerView = 3;
+                const maxGroups = Math.ceil(featuredDoctors.length / doctorsPerView);
+                for (let groupIndex = 0; groupIndex < maxGroups; groupIndex++) {
+                    const startIndex = groupIndex * doctorsPerView;
+                    const endIndex = Math.min(startIndex + doctorsPerView, featuredDoctors.length);
+                    const groupDoctors = featuredDoctors.slice(startIndex, endIndex);
+                %>
+                <div class="doctors-group flex flex-col sm:flex-row justify-center items-center sm:items-start gap-4 sm:gap-6 overflow-visible max-w-[1200px] mx-auto px-4 absolute inset-0 transition-transform duration-500 ease-in-out transition-opacity duration-500" 
+                     data-group="<%= groupIndex %>"
+                     data-initial-index="<%= groupIndex %>"
+                     style="<%= groupIndex === 0 ? 'transform: translateX(0%); opacity: 1; pointer-events: auto;' : 'transform: translateX(100%); opacity: 0; pointer-events: none;' %>">
                 <% groupDoctors.forEach((doctor, index) => { %>
                     <div class="flex-shrink-0" style="width: 224px; height: 406px;">
                         <div class="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transition-transform duration-300 ease-in-out hover:-translate-y-5" style="width: 224px; height: 406px; max-width: 224px; max-height: 406px; min-width: 224px; min-height: 406px;">
@@ -77,9 +82,9 @@
                 <% }); %>
             </div>
             <% } %>
-
+            </div>
             <!-- Carousel Indicators (Dots) -->
-            <% if (featuredDoctors.length > 3) { %>
+            <% if (maxGroups > 1) { %>
                 <div class="flex justify-center mt-8 space-x-3">
                     <% for (let i = 0; i < maxGroups; i++) { %>
                         <button 
@@ -95,21 +100,66 @@
     </div>
 </section>
 
+<style>
+.doctors-carousel-container {
+    position: relative;
+    width: 100%;
+    min-height: 1400px; /* Taller on mobile for stacked boxes */
+}
+
+@media (min-width: 640px) {
+    .doctors-carousel-container {
+        min-height: 500px; /* Normal height on desktop */
+    }
+}
+
+.doctors-group {
+    will-change: transform, opacity;
+}
+
+.doctors-group.transitioning {
+    transition: transform 500ms ease-in-out, opacity 500ms ease-in-out;
+}
+</style>
+
 <script>
 (function() {
     const doctorsGroups = document.querySelectorAll('.doctors-group');
-    if (doctorsGroups.length <= 1) return; // No rotation needed if 1 or fewer groups
+    if (doctorsGroups.length <= 1) {
+        return; // No rotation needed if 1 or fewer groups
+    }
     
     let currentIndex = 0;
     const maxGroups = doctorsGroups.length;
     let autoRotateInterval;
+    let isTransitioning = false;
     
     function updateDisplay() {
+        if (isTransitioning) return; // Prevent rapid transitions
+        isTransitioning = true;
+        
+        // Add transitioning class for smooth animation
+        doctorsGroups.forEach(group => group.classList.add('transitioning'));
+        
         doctorsGroups.forEach((group, index) => {
-            if (index === currentIndex) {
-                group.classList.remove('hidden');
+            // Calculate position relative to current slide
+            const offset = index - currentIndex;
+            
+            if (offset === 0) {
+                // Current slide: visible at center (0%)
+                group.style.transform = 'translateX(0%)';
+                group.style.opacity = '1';
+                group.style.pointerEvents = 'auto';
+            } else if (offset < 0) {
+                // Previous slide: hidden to the left (already passed)
+                group.style.transform = 'translateX(-100%)';
+                group.style.opacity = '0';
+                group.style.pointerEvents = 'none';
             } else {
-                group.classList.add('hidden');
+                // Next slide: starts from right (100%), moves to center (0%) when becomes current
+                group.style.transform = 'translateX(100%)';
+                group.style.opacity = '0';
+                group.style.pointerEvents = 'none';
             }
         });
         
@@ -117,12 +167,18 @@
         document.querySelectorAll('.carousel-indicator').forEach((indicator, i) => {
             if (i === currentIndex) {
                 indicator.classList.remove('bg-white/50');
-                indicator.classList.add('bg-white');
+                indicator.classList.add('bg-white', 'w-3', 'h-3');
             } else {
-                indicator.classList.remove('bg-white');
+                indicator.classList.remove('bg-white', 'w-3', 'h-3');
                 indicator.classList.add('bg-white/50');
             }
         });
+        
+        // Remove transitioning class after animation
+        setTimeout(() => {
+            doctorsGroups.forEach(group => group.classList.remove('transitioning'));
+            isTransitioning = false;
+        }, 500);
     }
     
     function nextSlide() {
@@ -131,6 +187,7 @@
     }
     
     window.goToSlide = function(index) {
+        if (index === currentIndex || isTransitioning) return;
         currentIndex = index;
         updateDisplay();
     };
@@ -142,7 +199,7 @@
     }
     
     // Pause on hover
-    const container = document.querySelector('.relative.max-h-\\[800px\\]');
+    const container = document.querySelector('.relative.max-h-\\[1400px\\]');
     if (container) {
         container.addEventListener('mouseenter', function() {
             if (autoRotateInterval) clearInterval(autoRotateInterval);
@@ -153,7 +210,40 @@
         });
     }
     
+    // Touch/swipe support for mobile
+    let touchStartX = 0;
+    let touchEndX = 0;
+    
+    const carouselContainer = document.querySelector('.doctors-carousel-container');
+    if (carouselContainer) {
+        carouselContainer.addEventListener('touchstart', function(e) {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+        
+        carouselContainer.addEventListener('touchend', function(e) {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, { passive: true });
+    }
+    
+    function handleSwipe() {
+        const swipeThreshold = 50; // Minimum swipe distance
+        const diff = touchStartX - touchEndX;
+        
+        if (Math.abs(diff) > swipeThreshold) {
+            if (diff > 0) {
+                // Swipe left - go to next slide
+                nextSlide();
+            } else {
+                // Swipe right - go to previous slide
+                currentIndex = (currentIndex - 1 + maxGroups) % maxGroups;
+                updateDisplay();
+            }
+        }
+    }
+    
     // Initialize
+    updateDisplay();
     startAutoRotate();
 })();
 </script>

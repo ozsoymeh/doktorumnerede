@@ -37,7 +37,7 @@
                     %>
                     <article class="relative isolate flex flex-col gap-8 lg:flex-row">
                         <!-- Image Section - Above title on mobile, left side on desktop -->
-                        <div class="relative w-full h-[250px] order-1 lg:order-1 lg:h-auto lg:aspect-square lg:w-64 lg:shrink-0">
+                        <div class=" relative w-full h-[250px] order-1 lg:h-auto lg:aspect-square lg:w-64 lg:shrink-0">
                             <% if (post.photo1) { %>
                                 <img src="/uploads/<%= post.photo1 %>" alt="" class="absolute inset-0 w-full h-full rounded-2xl bg-gray-50 object-cover" />
                             <% } else { %>
@@ -101,21 +101,24 @@
                                 <% 
                                 // Show specialty search button if there are specialties
                                 if (validSpecialties.length > 0) {
-                                    // Use first specialty for the search link (server expects single specialty parameter)
-                                    const firstSpecialty = validSpecialties[0];
-                                    // Build URL - ensure specialty value is properly encoded
-                                    const specialtyParam = encodeURIComponent(firstSpecialty);
-                                    let specialtyUrl = '/?specialty=' + specialtyParam;
+                                    // Build URL with all specialties as multiple query parameters
+                                    let specialtyUrl = '/?';
+                                    validSpecialties.forEach((spec, idx) => {
+                                        if (idx > 0) specialtyUrl += '&';
+                                        specialtyUrl += 'specialty=' + encodeURIComponent(spec);
+                                    });
                                     // Preserve language parameter if not German
                                     if (lang && lang !== 'de' && lang !== '') {
                                         specialtyUrl += '&lang=' + encodeURIComponent(lang);
                                     }
+                                    specialtyUrl += '#search';
                                     const buttonText = lang === 'tr' 
                                         ? 'Bu konu ile ilgili daha fazla bilgi almak isterseniz, Doktorlarımız size memnuniyetle yardımcı olacaktır.'
                                         : 'Haben Sie mehr Fragen? Unsere Ärzt*innen beraten Sie gerne';
                                 %>
                                     <div class="mt-6 relative z-20">
                                         <a href="<%= specialtyUrl %>" 
+                                           onclick="event.preventDefault(); window.location.href = '<%= specialtyUrl %>'; const searchEl = document.getElementById('search'); if (searchEl) { setTimeout(() => searchEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100); }"
                                            style="background-color: #4338ca; color: white; position: relative; z-index: 20;" 
                                            class="inline-flex items-center px-4 py-2 hover:bg-indigo-800 text-sm font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 no-underline cursor-pointer">
                                             <span><%= buttonText %></span>
@@ -154,6 +157,26 @@
     font-size: 0.875rem;
     color: #4B5563;
 }
+
+/* Ensure photos display properly on mobile */
+#modalPhotoTop img {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto 1rem;
+}
+
+/* Convert float images to block on mobile */
+@media (max-width: 640px) {
+    .blog-content img {
+        float: none !important;
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto 1rem !important;
+    }
+}
 </style>
 
 <!-- Blog Modal -->
@@ -169,6 +192,7 @@
                 </button>
             </div>
             <div class="p-6">
+                <div id="modalPhotoTop" class="mb-6 w-full"></div>
                 <div id="modalContent" class="blog-content text-gray-700 text-sm leading-relaxed text-justify"></div>
                 <div id="modalInquiryLink" class="mt-6"></div>
             </div>
@@ -207,6 +231,17 @@ function openBlogModal(index, postId) {
         processedText = processedText.replace(/\[PHOTO2\]/g, '');
     }
     
+    // Handle photos - always show photo1 at top for mobile visibility
+    const modalPhotoTop = document.getElementById('modalPhotoTop');
+    if (modalPhotoTop) {
+        // Only show photo1 at top if it exists and is not empty
+        if (data.photo1 && data.photo1.trim() !== '') {
+            modalPhotoTop.innerHTML = `<img src="/uploads/${data.photo1}" alt="" class="w-full max-w-md mx-auto mb-4 rounded-lg block" onerror="this.style.display='none'">`;
+        } else {
+            modalPhotoTop.innerHTML = '';
+        }
+    }
+    
     // Convert to paragraphs - split on double line breaks
     const paragraphs = processedText.split(/\n\n+/).filter(p => p.trim());
     let htmlContent = paragraphs.map(p => {
@@ -216,23 +251,20 @@ function openBlogModal(index, postId) {
         return '<p class="mb-4">' + trimmed.replace(/\n/g, '<br>') + '</p>';
     }).join('');
     
-    // Add photo at top if not embedded
-    if (data.photo1 && !data.text.includes('[PHOTO1]')) {
-        htmlContent = `<img src="/uploads/${data.photo1}" alt="" class="w-full max-w-md mx-auto mb-6 rounded-lg">` + htmlContent;
-    }
-    
     document.getElementById('modalContent').innerHTML = htmlContent;
     
     // Add inquiry link button if specialties exist
     const inquiryLinkDiv = document.getElementById('modalInquiryLink');
     if (data.specialties && data.specialties.length > 0) {
         const specialtyParams = data.specialties.map(s => 'specialty=' + encodeURIComponent(s)).join('&');
+        const specialtyUrl = '/?' + specialtyParams + '#search';
         const linkText = data.lang === 'tr' 
             ? 'Bu konu ile ilgili daha fazla bilgi almak isterseniz, Doktorlarımız size memnuniyetle yardımcı olacaktır.'
             : 'Haben Sie mehr Fragen? Unsere Ärzt*innen beraten Sie gerne';
         
         inquiryLinkDiv.innerHTML = `
-            <a href="/?${specialtyParams}" 
+            <a href="${specialtyUrl}" 
+               onclick="event.preventDefault(); window.location.href = '${specialtyUrl}'; const searchEl = document.getElementById('search'); if (searchEl) { setTimeout(() => searchEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100); }"
                style="background-color: #4338ca; color: white;" 
                class="inline-flex items-center px-4 py-2 hover:bg-indigo-800 text-sm font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200">
                 <span>${linkText}</span>

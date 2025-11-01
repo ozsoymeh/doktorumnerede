@@ -84,60 +84,115 @@ try {
 // Multer Konfiguration für Datei-Uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        if (file.fieldname === 'excel') {
-            cb(null, path.join(__dirname, 'data'));
-        } else if (file.fieldname === 'photo' || file.fieldname === 'galleryPhotos') {
-            const tempDir = path.join(__dirname, 'public', 'uploads', 'temp');
-            // Ensure temp directory exists
-            if (!fs.existsSync(tempDir)) {
-                fs.mkdirSync(tempDir, { recursive: true });
-            }
-            cb(null, tempDir);
-        } else if (file.fieldname === 'blogPhoto1' || file.fieldname === 'blogPhoto2') {
-            const tempDir = path.join(__dirname, 'public', 'uploads', 'temp');
-            // Ensure temp directory exists
-            if (!fs.existsSync(tempDir)) {
-                fs.mkdirSync(tempDir, { recursive: true });
-            }
-            cb(null, tempDir);
+        console.log('\n[STORAGE] ===== DESTINATION CALLED =====');
+        console.log('[STORAGE] This means fileFilter accepted the file!');
+        console.log('[STORAGE] File details:', {
+            fieldname: file.fieldname,
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            encoding: file.encoding,
+            size: file.size
+        });
+        
+        // Use temp directory for all file types for debugging
+        const tempDir = path.join(__dirname, 'public', 'uploads', 'temp');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+            console.log('[STORAGE] Created temp directory:', tempDir);
         }
+        console.log('[STORAGE] Setting destination to:', tempDir);
+        cb(null, tempDir);
     },
     filename: function (req, file, cb) {
-        if (file.fieldname === 'excel') {
-            cb(null, 'doctors.xlsx');
-        } else if (file.fieldname === 'photo' || file.fieldname === 'galleryPhotos') {
-            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-            cb(null, uniqueSuffix + path.extname(file.originalname));
-        } else if (file.fieldname === 'blogPhoto1' || file.fieldname === 'blogPhoto2') {
-            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-            cb(null, uniqueSuffix + path.extname(file.originalname));
-        }
+        console.log('\n[STORAGE] ===== FILENAME CALLED =====');
+        console.log('[STORAGE] File details:', {
+            fieldname: file.fieldname,
+            originalname: file.originalname
+        });
+        
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const filename = uniqueSuffix + path.extname(file.originalname);
+        console.log('[STORAGE] Generated filename:', filename);
+        cb(null, filename);
     }
 });
 
 const fileFilter = (req, file, cb) => {
+    console.log('\n[FILEFILTER] ===== FILE FILTER CALLED =====');
+    console.log('[FILEFILTER] This means Multer found a file!');
+    console.log('[FILEFILTER] Request headers:', {
+        'content-type': req.headers['content-type'],
+        'content-length': req.headers['content-length']
+    });
+    console.log('[FILEFILTER] File details:', {
+        fieldname: file.fieldname,
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        encoding: file.encoding,
+        size: file.size || 'unknown'
+    });
+    
+    // Accept ALL files for now to debug - we'll see what Multer receives
+    console.log('[FILEFILTER] ACCEPTING FILE FOR DEBUGGING');
+    cb(null, true);
+    
+    /* Original validation - disabled for debugging
     if (file.fieldname === 'photo' || file.fieldname === 'galleryPhotos' || file.fieldname === 'blogPhoto1' || file.fieldname === 'blogPhoto2') {
-        // Überprüfe Dateityp
-        if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+        // Überprüfe Dateityp - use case-insensitive check
+        if (!file.originalname.match(/\.(jpg|jpeg|png)$/i)) {
+            console.error('[FILEFILTER] REJECTED - File type:', file.originalname);
             return cb(new Error('Nur JPG, JPEG und PNG Dateien sind erlaubt!'), false);
         }
         
-        // Überprüfe Dateigröße
-        const maxSize = 4 * 1024 * 1024; // 4MB für alle Bilder
-        if (parseInt(req.headers['content-length']) > maxSize) {
-            return cb(new Error('Die Dateigröße darf maximal 4MB betragen!'), false);
+        // Check mimetype as well - but be lenient as some browsers send different mimetypes
+        if (file.mimetype && !file.mimetype.match(/^image\/(jpeg|jpg|png)$/i)) {
+            console.warn('[FILEFILTER] WARNING - MIME type may not match:', file.mimetype);
+            // Don't reject based on mimetype alone - some browsers send wrong mimetypes
+            // Just warn but continue
         }
+        
+        console.log('[FILEFILTER] ACCEPTED - File passes validation');
+        cb(null, true);
+    } else {
+        console.log('[FILEFILTER] ACCEPTED - Not a photo field, allowing');
+        cb(null, true);
     }
-    cb(null, true);
+    */
 };
 
 const upload = multer({ 
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 4 * 1024 * 1024 // 4MB in Bytes
+        fileSize: 4 * 1024 * 1024, // 4MB in Bytes
+        files: 3, // Max 3 files total (1 photo + 2 gallery)
+        fields: 50, // Max form fields
+        parts: 100 // Max form parts
+    },
+    onError: function(err, next) {
+        console.error('\n[MULTER] ===== MULTER ERROR =====');
+        console.error('[MULTER] Error name:', err.name);
+        console.error('[MULTER] Error message:', err.message);
+        console.error('[MULTER] Error code:', err.code);
+        console.error('[MULTER] Error stack:', err.stack);
+        next(err);
     }
 });
+
+// Add middleware to log multer processing
+const logMulterProcessing = (req, res, next) => {
+    console.log('\n[MULTER MIDDLEWARE] Request received');
+    console.log('[MULTER MIDDLEWARE] Content-Type:', req.headers['content-type']);
+    
+    // Monkey-patch to see what multer does
+    const originalEnd = res.end;
+    res.end = function(...args) {
+        console.log('[MULTER MIDDLEWARE] Response ended');
+        originalEnd.apply(this, args);
+    };
+    
+    next();
+};
 
 // Fachbereiche
 const specialties = {
@@ -263,8 +318,31 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// CRITICAL: Body parser order - MUST check content-type BEFORE any parsing
+// Both JSON and urlencoded parsers MUST skip multipart requests
+app.use((req, res, next) => {
+    const contentType = req.headers['content-type'] || '';
+    if (contentType.includes('multipart/form-data')) {
+        // Skip ALL body parsing for multipart - let multer handle it
+        console.log('[BODY PARSER] Skipping ALL body parsing for multipart request');
+        console.log('[BODY PARSER] Content-Type:', contentType);
+        // DO NOT call any body parser - just pass through
+        return next();
+    }
+    // Only parse JSON for non-multipart requests
+    express.json()(req, res, next);
+});
+
+// CRITICAL: Only parse urlencoded for non-multipart requests
+app.use((req, res, next) => {
+    const contentType = req.headers['content-type'] || '';
+    if (contentType.includes('multipart/form-data')) {
+        // Skip urlencoded parser for multipart
+        return next();
+    }
+    // Use urlencoded parser for other content types only
+    express.urlencoded({ extended: true })(req, res, next);
+});
 app.use(express.static('public'));
 app.use(session(sessionOptions));
 
@@ -350,7 +428,7 @@ function generatePassword() {
     return password;
 }
 
-// Function to get doctors with profile photos for carousel (random order)
+// Function to get doctors with profile photos for carousel (random order, max 9)
 function getFeaturedDoctors(doctors) {
     // Filter doctors that have profile photos and are approved
     const qualifiedDoctors = doctors.filter(doctor => {
@@ -368,7 +446,8 @@ function getFeaturedDoctors(doctors) {
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     
-    return shuffled;
+    // Return maximum 9 doctors (3 groups of 3)
+    return shuffled.slice(0, 9);
 }
 
 // Funktion zur Formatierung des URL-Slugs
@@ -550,29 +629,66 @@ async function processExcelFile() {
     return doctors;
 }
 
-function getDoctors() {
+// Cache for getDoctors to avoid reading file on every request
+let doctorsCache = null;
+let doctorsCacheTime = 0;
+const DOCTORS_CACHE_TTL = 1000; // 1 second cache
+
+function getDoctors(forceRefresh = false) {
     const doctorsPath = path.join(__dirname, 'data', 'doctors.json');
     try {
         if (!fs.existsSync(doctorsPath)) {
             return [];
         }
-        return JSON.parse(fs.readFileSync(doctorsPath, 'utf8'));
+        
+        // Check cache - but allow forced refresh
+        const now = Date.now();
+        if (!forceRefresh && doctorsCache && (now - doctorsCacheTime) < DOCTORS_CACHE_TTL) {
+            return doctorsCache;
+        }
+        
+        // Read fresh from disk
+        const doctors = JSON.parse(fs.readFileSync(doctorsPath, 'utf8'));
+        
+        // Update cache
+        doctorsCache = doctors;
+        doctorsCacheTime = now;
+        
+        return doctors;
     } catch (error) {
         console.error('Fehler beim Laden der Ärztedaten:', error);
         return [];
     }
 }
 
+// Function to clear doctors cache (call after save)
+function clearDoctorsCache() {
+    doctorsCache = null;
+    doctorsCacheTime = 0;
+}
+
 function saveDoctors(doctors) {
     const doctorsPath = path.join(__dirname, 'data', 'doctors.json');
     try {
+        // Write file synchronously
         fs.writeFileSync(
             doctorsPath,
             JSON.stringify(doctors, null, 2),
             'utf8'
         );
+        
+        // Force sync to disk to ensure data is written before continuing
+        const fd = fs.openSync(doctorsPath, 'r+');
+        fs.fsyncSync(fd);
+        fs.closeSync(fd);
+        
+        // Clear cache to force fresh read on next request
+        clearDoctorsCache();
+        
+        console.log('Doctors data saved, synced to disk, and cache cleared');
     } catch (error) {
         console.error('Fehler beim Speichern der Ärztedaten:', error);
+        throw error; // Re-throw so caller knows save failed
     }
 }
 
@@ -637,9 +753,18 @@ app.get('/', (req, res) => {
     }
 
     if (specialty) {
-        filteredDoctors = filteredDoctors.filter(doctor => 
-            doctor.specialties && doctor.specialties.includes(specialty)
-        );
+        // Support multiple specialties - can be comma-separated, array from query params, or single value
+        let specialtyArray = [];
+        if (Array.isArray(specialty)) {
+            specialtyArray = specialty.map(s => String(s).trim()).filter(s => s);
+        } else if (typeof specialty === 'string') {
+            specialtyArray = specialty.split(',').map(s => s.trim()).filter(s => s);
+        }
+        if (specialtyArray.length > 0) {
+            filteredDoctors = filteredDoctors.filter(doctor => 
+                doctor.specialties && specialtyArray.some(spec => doctor.specialties.includes(spec))
+            );
+        }
     }
 
     if (zipCode) {
@@ -669,7 +794,18 @@ app.get('/', (req, res) => {
     // Build query string for pagination while preserving filters
     const queryParams = new URLSearchParams();
     if (name) queryParams.set('name', name);
-    if (specialty) queryParams.set('specialty', specialty);
+    if (specialty) {
+        // Handle multiple specialties - if array, add each one; if string, split by comma
+        let specialtyArray = [];
+        if (Array.isArray(specialty)) {
+            specialtyArray = specialty.map(s => String(s).trim()).filter(s => s);
+        } else if (typeof specialty === 'string') {
+            specialtyArray = specialty.split(',').map(s => s.trim()).filter(s => s);
+        }
+        specialtyArray.forEach(spec => {
+            queryParams.append('specialty', spec);
+        });
+    }
     if (city) queryParams.set('city', city);
     if (zipCode) queryParams.set('zipCode', zipCode);
     if (lang && lang !== 'de') queryParams.set('lang', lang);
@@ -758,30 +894,62 @@ app.get('/login', (req, res) => {
 });
 
 app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    const doctors = getDoctors();
-    const doctor = doctors.find(d => d.email.toLowerCase() === email.toLowerCase());
+    try {
+        const { email, password } = req.body;
+        
+        // Validate input
+        if (!email || !password) {
+            return res.render('login', { error: 'Bitte geben Sie E-Mail und Passwort ein.' });
+        }
+        
+        const doctors = getDoctors();
+        const doctor = doctors.find(d => d.email.toLowerCase() === email.toLowerCase());
 
-    if (doctor && await bcrypt.compare(password, doctor.password)) {
-        req.session.userId = doctor.email;
-        req.session.isAdmin = doctor.isAdmin || false;  // Speichere Admin-Status in der Session
-        
-        // Wenn das Profil nicht vollständig ist (keine Anrede gesetzt), zur Profilseite weiterleiten
-        if (!doctor.title || !doctor.isProfileComplete) {
-            req.session.message = {
-                type: 'info',
-                text: 'Bitte vervollständigen Sie Ihr Profil. Die Anrede ist ein Pflichtfeld.'
-            };
-            return res.redirect('/profile');
-        }
-        
-        if (doctor.isAdmin) {
-            res.redirect('/admin');
+        // Check if doctor exists and password is valid
+        if (doctor) {
+            // Check if doctor has a password hash
+            if (!doctor.password) {
+                console.error('Doctor found but has no password hash:', email);
+                return res.render('login', { error: 'Ungültige E-Mail oder Passwort' });
+            }
+            
+            try {
+                const isPasswordValid = await bcrypt.compare(password, doctor.password);
+                
+                if (isPasswordValid) {
+                    req.session.userId = doctor.email;
+                    req.session.isAdmin = doctor.isAdmin || false;  // Speichere Admin-Status in der Session
+                    
+                    // Wenn das Profil nicht vollständig ist (keine Anrede gesetzt), zur Profilseite weiterleiten
+                    if (!doctor.title || !doctor.isProfileComplete) {
+                        req.session.message = {
+                            type: 'info',
+                            text: 'Bitte vervollständigen Sie Ihr Profil. Die Anrede ist ein Pflichtfeld.'
+                        };
+                        return res.redirect('/profile');
+                    }
+                    
+                    if (doctor.isAdmin) {
+                        return res.redirect('/admin');
+                    } else {
+                        return res.redirect('/profile');
+                    }
+                } else {
+                    // Password doesn't match
+                    return res.render('login', { error: 'Ungültige E-Mail oder Passwort' });
+                }
+            } catch (bcryptError) {
+                console.error('Bcrypt error during login:', bcryptError);
+                return res.render('login', { error: 'Ungültige E-Mail oder Passwort' });
+            }
         } else {
-            res.redirect('/profile');
+            // Doctor not found
+            return res.render('login', { error: 'Ungültige E-Mail oder Passwort' });
         }
-    } else {
-        res.render('login', { error: 'Ungültige E-Mail oder Passwort' });
+    } catch (error) {
+        console.error('Login error:', error);
+        console.error('Login error stack:', error.stack);
+        return res.render('login', { error: 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.' });
     }
 });
 
@@ -944,13 +1112,18 @@ app.post('/logout', (req, res) => {
 
 // Profil Routes
 app.get('/profile', requireAuth, (req, res) => {
-    const doctors = getDoctors();
+    // ALWAYS read fresh from disk - don't use cache
+    // This ensures we see the latest gallery photos immediately after upload
+    const doctors = getDoctors(true); // forceRefresh = true
     const doctor = doctors.find(d => d.email === req.session.userId || req.session.doctorId);
     
     if (!doctor) {
         req.session.destroy();
         return res.redirect('/login');
     }
+    
+    console.log('[PROFILE GET] Loading profile for:', doctor.email);
+    console.log('[PROFILE GET] Gallery photos count:', doctor.galleryPhotos ? doctor.galleryPhotos.length : 0);
 
     res.render('profile', { 
         doctor: doctor,
@@ -985,18 +1158,117 @@ app.get('/edit-profile', requireAuth, (req, res) => {
     });
 });
 
-app.post('/profile/edit', requireAuth, upload.fields([
+// Middleware to log request before multer
+const logMulterRequest = (req, res, next) => {
+    console.log('\n========================================');
+    console.log('[PRE-MULTER] === REQUEST DEBUG ===');
+    console.log('[PRE-MULTER] Content-Type:', req.headers['content-type']);
+    console.log('[PRE-MULTER] Content-Length:', req.headers['content-length']);
+    console.log('[PRE-MULTER] Method:', req.method);
+    console.log('[PRE-MULTER] URL:', req.url);
+    console.log('[PRE-MULTER] Has body:', !!req.body);
+    console.log('[PRE-MULTER] Body keys:', req.body ? Object.keys(req.body) : 'no body');
+    console.log('[PRE-MULTER] Is multipart:', req.headers['content-type'] && req.headers['content-type'].includes('multipart'));
+    console.log('========================================\n');
+    next();
+};
+
+// Middleware to log after multer
+const logAfterMulter = (req, res, next) => {
+    console.log('\n========================================');
+    console.log('[POST-MULTER] === AFTER MULTER ===');
+    console.log('[POST-MULTER] Has files object:', !!req.files);
+    console.log('[POST-MULTER] Files keys:', req.files ? Object.keys(req.files) : 'no files');
+    console.log('[POST-MULTER] Files object:', JSON.stringify(req.files, null, 2));
+    if (req.files && req.files.photo) {
+        console.log('[POST-MULTER] Photo files:', req.files.photo.length);
+        req.files.photo.forEach((f, i) => {
+            console.log(`[POST-MULTER] Photo ${i}:`, f.fieldname, f.originalname, f.path);
+        });
+    }
+    if (req.files && req.files.galleryPhotos) {
+        console.log('[POST-MULTER] Gallery files:', req.files.galleryPhotos.length);
+        req.files.galleryPhotos.forEach((f, i) => {
+            console.log(`[POST-MULTER] Gallery ${i}:`, f.fieldname, f.originalname, f.path);
+        });
+    }
+    console.log('[POST-MULTER] Has body:', !!req.body);
+    console.log('[POST-MULTER] Body keys:', req.body ? Object.keys(req.body).length : 0);
+    console.log('========================================\n');
+    next();
+};
+
+// Create upload middleware with extensive logging
+const photoUpload = upload.fields([
     { name: 'photo', maxCount: 1 },
     { name: 'galleryPhotos', maxCount: 2 }
-]), async (req, res) => {
+]);
+
+// Wrap multer middleware to add debugging
+const wrappedUpload = (req, res, next) => {
+    console.log('\n[WRAPPED UPLOAD] ===== ENTERING WRAPPED UPLOAD =====');
+    console.log('[WRAPPED UPLOAD] Content-Type:', req.headers['content-type']);
+    console.log('[WRAPPED UPLOAD] Content-Length:', req.headers['content-length']);
+    console.log('[WRAPPED UPLOAD] Is multipart:', req.headers['content-type'] && req.headers['content-type'].includes('multipart'));
+    console.log('[WRAPPED UPLOAD] req.body before multer:', req.body);
+    console.log('[WRAPPED UPLOAD] req.files before multer:', req.files);
+    
+    // Store original onFinished if it exists
+    const originalOnFinished = req.on || (() => {});
+    
+    // Inspect the raw request stream before Multer
+    console.log('[WRAPPED UPLOAD] Inspecting request before Multer...');
+    console.log('[WRAPPED UPLOAD] req.readable:', req.readable);
+    console.log('[WRAPPED UPLOAD] req.readableEnded:', req.readableEnded);
+    console.log('[WRAPPED UPLOAD] req.headers:', JSON.stringify(req.headers, null, 2));
+    
+    // Check if body has been consumed
+    if (req.body && Object.keys(req.body).length > 0) {
+        console.warn('[WRAPPED UPLOAD] WARNING: req.body already has data before Multer! This might indicate body was consumed.');
+    }
+    
+    // Call the actual multer middleware
+    console.log('[WRAPPED UPLOAD] Calling Multer middleware now...');
+    photoUpload(req, res, (err) => {
+        if (err) {
+            console.error('\n[WRAPPED UPLOAD] ===== MULTER ERROR =====');
+            console.error('[WRAPPED UPLOAD] Error:', err);
+            console.error('[WRAPPED UPLOAD] Error name:', err.name);
+            console.error('[WRAPPED UPLOAD] Error message:', err.message);
+            console.error('[WRAPPED UPLOAD] Error code:', err.code);
+            console.error('[WRAPPED UPLOAD] Error field:', err.field);
+            return next(err);
+        }
+        console.log('\n[WRAPPED UPLOAD] ===== MULTER COMPLETED =====');
+        console.log('[WRAPPED UPLOAD] req.files after multer:', req.files);
+        console.log('[WRAPPED UPLOAD] req.files type:', typeof req.files);
+        console.log('[WRAPPED UPLOAD] req.files keys:', req.files ? Object.keys(req.files) : 'no files');
+        console.log('[WRAPPED UPLOAD] req.body after multer:', req.body ? Object.keys(req.body).length + ' keys' : 'no body');
+        
+        // If no files but request is multipart, something is wrong
+        if (req.headers['content-type'] && req.headers['content-type'].includes('multipart') && (!req.files || Object.keys(req.files).length === 0)) {
+            console.error('[WRAPPED UPLOAD] CRITICAL: Multipart request but no files found!');
+            console.error('[WRAPPED UPLOAD] This means files are not in the request stream.');
+        }
+        
+        next();
+    });
+};
+
+app.post('/profile/edit', requireAuth, logMulterRequest, wrappedUpload, logAfterMulter, async (req, res, next) => {
     try {
         console.log('Profile edit request received:', {
             email: req.session.userId,
+            contentType: req.headers['content-type'],
+            contentLength: req.headers['content-length'],
             isApproved: !!getDoctors().find(d => d.email === (req.session.userId || req.session.doctorId))?.isApproved,
             bodyKeys: Object.keys(req.body || {}),
+            filesObject: req.files,
+            filesKeys: req.files ? Object.keys(req.files) : 'no files object',
             hasPhoto: !!(req.files && req.files.photo && req.files.photo.length),
             hasGallery: !!(req.files && req.files.galleryPhotos && req.files.galleryPhotos.length),
-            fullBody: JSON.stringify(req.body, null, 2)
+            photoDetails: req.files && req.files.photo ? req.files.photo : 'no photo',
+            galleryDetails: req.files && req.files.galleryPhotos ? req.files.galleryPhotos : 'no gallery'
         });
         
         const doctors = getDoctors();
@@ -1118,16 +1390,67 @@ app.post('/profile/edit', requireAuth, upload.fields([
         }
 
         // Profilfoto verarbeiten (nur wenn vorhanden)
-        if (req.files && req.files.photo && req.files.photo[0]) {
+        console.log('Checking for photo upload:', {
+            hasFiles: !!req.files,
+            filesKeys: req.files ? Object.keys(req.files) : 'no files object',
+            hasPhoto: !!(req.files && req.files.photo),
+            photoArray: req.files && req.files.photo ? req.files.photo.length : 0,
+            photoDetails: req.files && req.files.photo && req.files.photo[0] ? {
+                fieldname: req.files.photo[0].fieldname,
+                originalname: req.files.photo[0].originalname,
+                mimetype: req.files.photo[0].mimetype,
+                size: req.files.photo[0].size,
+                path: req.files.photo[0].path
+            } : 'no photo file'
+        });
+        
+        if (req.files && req.files.photo && req.files.photo.length > 0 && req.files.photo[0]) {
             try {
+                console.log('\n[PHOTO PROCESS] ===== STARTING PHOTO PROCESSING =====');
                 const photo = req.files.photo[0];
+                console.log('[PHOTO PROCESS] Photo object:', {
+                    fieldname: photo.fieldname,
+                    originalname: photo.originalname,
+                    encoding: photo.encoding,
+                    mimetype: photo.mimetype,
+                    destination: photo.destination,
+                    filename: photo.filename,
+                    path: photo.path,
+                    size: photo.size
+                });
+                
                 const photoFileName = `profile-${Date.now()}.jpg`;
                 const uploadsDir = path.join(__dirname, 'public', 'uploads');
+                
+                console.log('[PHOTO PROCESS] Processing details:', {
+                    photoPath: photo.path,
+                    photoSize: photo.size,
+                    photoType: photo.mimetype,
+                    photoFileName: photoFileName,
+                    uploadsDir: uploadsDir
+                });
                 
                 // Ensure uploads directory exists
                 if (!fs.existsSync(uploadsDir)) {
                     fs.mkdirSync(uploadsDir, { recursive: true });
+                    console.log('[PHOTO PROCESS] Created uploads directory:', uploadsDir);
+                } else {
+                    console.log('[PHOTO PROCESS] Uploads directory exists:', uploadsDir);
                 }
+                
+                // Verify temp file exists
+                console.log('[PHOTO PROCESS] Checking temp file:', photo.path);
+                if (!fs.existsSync(photo.path)) {
+                    console.error('[PHOTO PROCESS] ERROR: Temp file does not exist!');
+                    throw new Error('Temporary file not found at: ' + photo.path);
+                }
+                const tempStats = fs.statSync(photo.path);
+                console.log('[PHOTO PROCESS] Temp file verified:', {
+                    exists: true,
+                    size: tempStats.size,
+                    created: tempStats.birthtime,
+                    modified: tempStats.mtime
+                });
                 
                 // Altes Foto löschen falls vorhanden
                 if (doctors[doctorIndex].photo) {
@@ -1143,10 +1466,9 @@ app.post('/profile/edit', requireAuth, upload.fields([
                 }
 
                 const destPath = path.join(uploadsDir, photoFileName);
-                console.log('Processing photo upload:', {
+                console.log('Processing photo with Sharp:', {
                     source: photo.path,
-                    destination: destPath,
-                    originalName: photo.originalname
+                    destination: destPath
                 });
 
                 await sharp(photo.path)
@@ -1159,11 +1481,17 @@ app.post('/profile/edit', requireAuth, upload.fields([
                     throw new Error('Photo file was not created after processing');
                 }
                 
-                console.log('Photo successfully saved to:', destPath);
+                const fileStats = fs.statSync(destPath);
+                console.log('Photo successfully saved:', {
+                    path: destPath,
+                    size: fileStats.size,
+                    created: fileStats.birthtime
+                });
                 
                 // Temporäre Datei löschen
                 try {
                     await fsPromises.unlink(photo.path);
+                    console.log('Temp file deleted:', photo.path);
                 } catch (error) {
                     console.error('Fehler beim Löschen der temporären Datei:', error);
                 }
@@ -1172,58 +1500,119 @@ app.post('/profile/edit', requireAuth, upload.fields([
                 console.log('Updated doctor photo field to:', photoFileName);
             } catch (photoError) {
                 console.error('Fehler beim Verarbeiten des Profilfotos:', photoError);
+                console.error('Photo error stack:', photoError.stack);
                 req.session.message = {
                     type: 'error',
                     text: 'Fehler beim Hochladen des Profilfotos: ' + photoError.message
                 };
             }
+        } else {
+            console.log('No photo file received in request');
         }
 
         // Galeriefotos verarbeiten (nur wenn vorhanden)
+        console.log('Checking for gallery photos upload:', {
+            hasFiles: !!req.files,
+            filesKeys: req.files ? Object.keys(req.files) : 'no files object',
+            hasGalleryPhotos: !!(req.files && req.files.galleryPhotos),
+            galleryPhotosArray: req.files && req.files.galleryPhotos ? req.files.galleryPhotos.length : 0,
+            galleryPhotosDetails: req.files && req.files.galleryPhotos && req.files.galleryPhotos.length > 0 ? 
+                req.files.galleryPhotos.map((p, idx) => ({
+                    index: idx,
+                    fieldname: p.fieldname,
+                    originalname: p.originalname,
+                    mimetype: p.mimetype,
+                    size: p.size,
+                    path: p.path
+                })) : 'no gallery photos'
+        });
+        
         if (req.files && req.files.galleryPhotos && req.files.galleryPhotos.length > 0) {
             try {
                 const existingPhotos = doctors[doctorIndex].galleryPhotos || [];
-                const remainingSlots = 3 - existingPhotos.length;
+                console.log('Gallery photos - existing photos:', existingPhotos.length, existingPhotos);
+                
+                const remainingSlots = 2 - existingPhotos.length; // Changed from 3 to 2 as per form description
+                console.log('Gallery photos - remaining slots:', remainingSlots);
+                
                 const uploadsDir = path.join(__dirname, 'public', 'uploads');
                 
                 // Ensure uploads directory exists
                 if (!fs.existsSync(uploadsDir)) {
                     fs.mkdirSync(uploadsDir, { recursive: true });
+                    console.log('Created uploads directory for gallery photos:', uploadsDir);
                 }
                 
                 if (remainingSlots > 0) {
                     const newGalleryPhotos = [];
                     const photosToProcess = req.files.galleryPhotos.slice(0, remainingSlots); // Limit to available slots
+                    console.log('Gallery photos - photos to process:', photosToProcess.length);
                     
-                    for (const photo of photosToProcess) {
-                        const photoFileName = `gallery-${Date.now()}-${Math.round(Math.random() * 1E9)}.jpg`;
+                    for (let i = 0; i < photosToProcess.length; i++) {
+                        const photo = photosToProcess[i];
+                        console.log(`Processing gallery photo ${i + 1}/${photosToProcess.length}:`, {
+                            originalName: photo.originalname,
+                            path: photo.path,
+                            size: photo.size,
+                            mimetype: photo.mimetype
+                        });
+                        
+                        // Verify temp file exists
+                        if (!fs.existsSync(photo.path)) {
+                            throw new Error(`Temporary gallery photo file not found at: ${photo.path}`);
+                        }
+                        console.log('Gallery temp file exists, size:', fs.statSync(photo.path).size);
+                        
+                        const photoFileName = `gallery-${Date.now()}-${i}-${Math.round(Math.random() * 1E9)}.jpg`;
                         const destPath = path.join(uploadsDir, photoFileName);
                         
-                        await sharp(photo.path)
-                            .resize(800, 600, { fit: 'cover' })
-                            .jpeg({ quality: 90 })
-                            .toFile(destPath);
+                        console.log('Processing gallery photo with Sharp:', {
+                            source: photo.path,
+                            destination: destPath,
+                            fileName: photoFileName
+                        });
                         
-                        // Verify file was created
-                        if (!fs.existsSync(destPath)) {
-                            throw new Error('Gallery photo file was not created after processing');
+                        try {
+                            await sharp(photo.path)
+                                .resize(800, 600, { fit: 'cover' })
+                                .jpeg({ quality: 90 })
+                                .toFile(destPath);
+                            
+                            // Verify file was created
+                            if (!fs.existsSync(destPath)) {
+                                throw new Error(`Gallery photo file was not created after processing: ${destPath}`);
+                            }
+                            
+                            const fileStats = fs.statSync(destPath);
+                            console.log(`Gallery photo ${i + 1} successfully saved:`, {
+                                path: destPath,
+                                size: fileStats.size,
+                                created: fileStats.birthtime
+                            });
+                            
+                            newGalleryPhotos.push(photoFileName);
+                            console.log(`Added gallery photo ${i + 1} to array:`, photoFileName);
+                        } catch (sharpError) {
+                            console.error(`Error processing gallery photo ${i + 1} with Sharp:`, sharpError);
+                            throw new Error(`Fehler beim Verarbeiten von "${photo.originalname}": ${sharpError.message}`);
                         }
                         
                         // Temporäre Datei löschen
                         try {
                             await fsPromises.unlink(photo.path);
+                            console.log(`Temp gallery file deleted:`, photo.path);
                         } catch (error) {
                             console.error('Fehler beim Löschen der temporären Galeriedatei:', error);
                         }
-                        
-                        newGalleryPhotos.push(photoFileName);
                     }
 
                     // Bereinige nicht verarbeitete Dateien (falls mehr als remainingSlots hochgeladen wurden)
                     if (req.files.galleryPhotos.length > remainingSlots) {
+                        console.log(`Cleaning up ${req.files.galleryPhotos.length - remainingSlots} unprocessed gallery photos`);
                         for (let i = remainingSlots; i < req.files.galleryPhotos.length; i++) {
                             try {
                                 await fsPromises.unlink(req.files.galleryPhotos[i].path);
+                                console.log(`Deleted unprocessed gallery photo:`, req.files.galleryPhotos[i].path);
                             } catch (error) {
                                 console.error('Fehler beim Löschen der nicht verarbeiteten Datei:', error);
                             }
@@ -1231,34 +1620,47 @@ app.post('/profile/edit', requireAuth, upload.fields([
                         if (!req.session.message) {
                             req.session.message = {
                                 type: 'info',
-                                text: `${photosToProcess.length} Foto(s) hinzugefügt. Sie haben bereits 3 Ordinationsfotos (Maximum).`
+                                text: `${photosToProcess.length} Foto(s) hinzugefügt. Sie haben bereits 2 Ordinationsfotos (Maximum).`
                             };
                         }
                     }
 
                     // Neue Fotos zu bestehenden hinzufügen (nicht ersetzen!)
                     updatedDoctor.galleryPhotos = [...existingPhotos, ...newGalleryPhotos];
+                    console.log('Updated gallery photos array:', {
+                        oldCount: existingPhotos.length,
+                        newCount: newGalleryPhotos.length,
+                        totalCount: updatedDoctor.galleryPhotos.length,
+                        allPhotos: updatedDoctor.galleryPhotos
+                    });
                 } else {
-                    // Wenn bereits 3 Fotos vorhanden, alle temporären Dateien löschen
+                    console.log('Gallery photos - maximum reached, deleting temp files');
+                    // Wenn bereits 2 Fotos vorhanden, alle temporären Dateien löschen
                     for (const photo of req.files.galleryPhotos) {
                         try {
                             await fsPromises.unlink(photo.path);
+                            console.log('Deleted temp gallery photo (max reached):', photo.path);
                         } catch (error) {
                             console.error('Fehler beim Löschen der temporären Datei:', error);
                         }
                     }
-                    req.session.message = {
-                        type: 'info',
-                        text: 'Sie können maximal 3 Ordinationsfotos haben. Bitte löschen Sie zuerst ein Foto, um ein neues hochzuladen.'
-                    };
+                    if (!req.session.message) {
+                        req.session.message = {
+                            type: 'info',
+                            text: 'Sie können maximal 2 Ordinationsfotos haben. Bitte löschen Sie zuerst ein Foto, um ein neues hochzuladen.'
+                        };
+                    }
                 }
             } catch (galleryError) {
                 console.error('Fehler beim Verarbeiten der Galeriefotos:', galleryError);
+                console.error('Gallery error stack:', galleryError.stack);
                 req.session.message = {
                     type: 'error',
-                    text: 'Fehler beim Hochladen der Galeriefotos: ' + galleryError.message
+                    text: 'Fehler beim Hochladen der Galeriefotos: ' + (galleryError.message || 'Unbekannter Fehler')
                 };
             }
+        } else {
+            console.log('No gallery photos received in request');
         }
 
         // Adresse zusammenführen, wenn Felder vorhanden
@@ -1289,22 +1691,51 @@ app.post('/profile/edit', requireAuth, upload.fields([
         }
 
         doctors[doctorIndex] = updatedDoctor;
+        
+        console.log('About to save doctor profile:', {
+            email: doctors[doctorIndex].email,
+            galleryPhotos: updatedDoctor.galleryPhotos,
+            galleryPhotosCount: updatedDoctor.galleryPhotos ? updatedDoctor.galleryPhotos.length : 0,
+            photo: updatedDoctor.photo
+        });
+        
         saveDoctors(doctors);
-
+        
         console.log('Profile edit saved for:', doctors[doctorIndex].email, {
             street: updatedDoctor.street,
             zipCode: updatedDoctor.zipCode,
             city: updatedDoctor.city,
             insurance: updatedDoctor.insurance,
             insuranceType: updatedDoctor.insuranceType,
-            photo: updatedDoctor.photo
+            photo: updatedDoctor.photo,
+            galleryPhotos: updatedDoctor.galleryPhotos,
+            galleryPhotosCount: updatedDoctor.galleryPhotos ? updatedDoctor.galleryPhotos.length : 0
         });
         
-        // Verify the saved insurance values
-        const savedDoctor = getDoctors().find(d => d.email === req.session.userId || req.session.doctorId);
+        // CRITICAL: Verify saved data by reading directly from disk (not from memory)
+        // This ensures we're reading the actual saved file
+        const doctorsPath = path.join(__dirname, 'data', 'doctors.json');
+        const savedDoctors = JSON.parse(fs.readFileSync(doctorsPath, 'utf8'));
+        const savedDoctor = savedDoctors.find(d => d.email === req.session.userId || req.session.doctorId);
+        
         if (savedDoctor) {
             console.log('VERIFICATION - Saved insurance values:', savedDoctor.insurance);
             console.log('VERIFICATION - Saved photo:', savedDoctor.photo);
+            console.log('VERIFICATION - Saved galleryPhotos:', savedDoctor.galleryPhotos);
+            console.log('VERIFICATION - Saved galleryPhotos count:', savedDoctor.galleryPhotos ? savedDoctor.galleryPhotos.length : 0);
+            
+            // Verify gallery photos match what we just saved
+            if (updatedDoctor.galleryPhotos && updatedDoctor.galleryPhotos.length > 0) {
+                const savedGalleryCount = savedDoctor.galleryPhotos ? savedDoctor.galleryPhotos.length : 0;
+                const expectedGalleryCount = updatedDoctor.galleryPhotos.length;
+                if (savedGalleryCount === expectedGalleryCount) {
+                    console.log(`✓ Gallery photos verified: ${savedGalleryCount} photos saved correctly`);
+                } else {
+                    console.warn(`⚠ Gallery photos mismatch: expected ${expectedGalleryCount}, found ${savedGalleryCount}`);
+                }
+            }
+        } else {
+            console.error('VERIFICATION FAILED - Doctor not found after save!');
         }
 
         // Only set success message if no error message was already set (e.g., from photo upload failure)
@@ -1316,17 +1747,89 @@ app.post('/profile/edit', requireAuth, upload.fields([
             req.session.success = true;
         }
 
+        // Small delay to ensure file system and cache are ready (especially for gallery photos)
+        if (req.files && req.files.galleryPhotos && req.files.galleryPhotos.length > 0) {
+            console.log('Gallery photos uploaded - ensuring file system is ready...');
+            await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+        }
+
         res.redirect('/profile');
     } catch (error) {
         console.error('Fehler beim Speichern der Profiländerungen:', error);
+        console.error('Error stack:', error.stack);
+        console.error('Error details:', {
+            name: error.name,
+            message: error.message,
+            code: error.code
+        });
+        
+        let errorMessage = 'Beim Speichern der Änderungen ist ein Fehler aufgetreten.';
+        if (error.code === 'LIMIT_FILE_SIZE') {
+            errorMessage = 'Die Datei ist zu groß. Maximal 4MB erlaubt.';
+        } else if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+            errorMessage = 'Unerwarteter Dateityp. Bitte verwenden Sie nur JPG, JPEG oder PNG.';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
         req.session.message = {
             type: 'error',
-            text: 'Beim Speichern der Änderungen ist ein Fehler aufgetreten.'
+            text: errorMessage
         };
-        req.session.error = 'Beim Speichern der Änderungen ist ein Fehler aufgetreten.';
+        req.session.error = errorMessage;
 
         res.redirect('/profile');
     }
+}, (err, req, res, next) => {
+    // Multer error handler - handles errors from upload middleware
+    console.error('Error handler called in /profile/edit:', {
+        errorName: err ? err.name : 'no error',
+        errorMessage: err ? err.message : 'no error',
+        isMulterError: err instanceof multer.MulterError,
+        errorCode: err && err.code ? err.code : 'no code',
+        errorStack: err ? err.stack : 'no stack'
+    });
+    
+    if (err instanceof multer.MulterError) {
+        console.error('Multer error in /profile/edit:', err);
+        console.error('Multer error code:', err.code);
+        console.error('Multer error field:', err.field);
+        let errorMessage = 'Fehler beim Hochladen der Datei.';
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            errorMessage = 'Die Datei ist zu groß. Maximal 4MB erlaubt.';
+        } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+            errorMessage = 'Unerwarteter Dateityp oder zu viele Dateien.';
+        } else if (err.code === 'LIMIT_FILE_COUNT') {
+            errorMessage = 'Zu viele Dateien hochgeladen.';
+        } else if (err.code === 'LIMIT_PART_COUNT') {
+            errorMessage = 'Zu viele Dateien in der Anfrage.';
+        } else {
+            errorMessage = 'Fehler beim Hochladen: ' + (err.message || err.code);
+        }
+        req.session.message = {
+            type: 'error',
+            text: errorMessage
+        };
+        return res.redirect('/profile');
+    }
+    if (err) {
+        console.error('Upload error in /profile/edit:', err);
+        console.error('Error stack:', err.stack);
+        // Check if it's a fileFilter error
+        if (err.message && err.message.includes('erlaubt')) {
+            req.session.message = {
+                type: 'error',
+                text: err.message
+            };
+        } else {
+            req.session.message = {
+                type: 'error',
+                text: err.message || 'Fehler beim Hochladen der Datei.'
+            };
+        }
+        return res.redirect('/profile');
+    }
+    next(err);
 });
 
 // Delete profile photo
