@@ -1,0 +1,272 @@
+<% if (blogPosts && blogPosts.length > 0) { %>
+<section class="bg-white py-24 sm:py-32">
+    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+        <div class="mx-auto max-w-2xl lg:max-w-4xl">
+            <h2 class="text-4xl font-semibold tracking-tight text-pretty text-gray-900 sm:text-5xl">
+                <%= lang === 'tr' ? 'Sağlığınız için öneriler' : 'Gesundheitstipps' %>
+            </h2>
+            <p class="mt-2 text-lg/8 text-gray-600">
+                <%= lang === 'tr' ? 'Uzman tavsiyelerimizle sağlığınızı koruyun ve geliştirin.' : 'Lernen Sie, wie Sie Ihre Gesundheit mit unseren Expertentipps fördern können.' %>
+            </p>
+
+            <div class="mt-16 space-y-20 lg:mt-20">
+                <% blogPosts.forEach((post, index) => { %>
+                    <% 
+                    const text = lang === 'tr' ? post.textTr : post.textDe;
+                    // Format date
+                    let formattedDate = '';
+                    if (post.createdAt) {
+                        try {
+                            const date = new Date(post.createdAt);
+                            if (!isNaN(date.getTime())) {
+                                const options = { year: 'numeric', month: 'short', day: 'numeric' };
+                                formattedDate = date.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'de-DE', options);
+                            }
+                        } catch (e) {
+                            // Date parsing failed, leave formattedDate empty
+                        }
+                    }
+                    // Filter out 'male' and 'female' from specialties
+                    const validSpecialties = post.specialties ? post.specialties.filter(s => s !== 'male' && s !== 'female') : [];
+                    // Get specialty translations - merge male and female if specialties object is available
+                    const specialtyLabels = {};
+                    if (typeof specialties !== 'undefined' && specialties) {
+                        if (specialties.male) Object.assign(specialtyLabels, specialties.male);
+                        if (specialties.female) Object.assign(specialtyLabels, specialties.female);
+                    }
+                    %>
+                    <article class="relative isolate flex flex-col gap-8 lg:flex-row">
+                        <!-- Image Section - Above title on mobile, left side on desktop -->
+                        <div class="relative w-full h-[250px] order-1 lg:order-1 lg:h-auto lg:aspect-square lg:w-64 lg:shrink-0">
+                            <% if (post.photo1) { %>
+                                <img src="/uploads/<%= post.photo1 %>" alt="" class="absolute inset-0 w-full h-full rounded-2xl bg-gray-50 object-cover" />
+                            <% } else { %>
+                                <div class="absolute inset-0 w-full h-full rounded-2xl bg-gray-50"></div>
+                            <% } %>
+                            <div class="absolute inset-0 rounded-2xl ring-1 ring-gray-900/10"></div>
+                        </div>
+
+                        <!-- Content Section -->
+                        <div class="flex-1 order-2 lg:order-2">
+                            <!-- Date and Specialty Tags -->
+                            <div class="flex items-center gap-x-4 text-xs">
+                                <% if (formattedDate) { %>
+                                    <time datetime="<%= post.createdAt %>" class="text-gray-500"><%= formattedDate %></time>
+                                <% } %>
+                                <% if (validSpecialties.length > 0) { %>
+                                    <% validSpecialties.forEach((spec, specIndex) => { %>
+                                        <% if (specIndex < 2) { %>
+                                            <span class="relative z-10 rounded-full bg-gray-50 px-3 py-1.5 font-medium text-gray-600 hover:bg-gray-100">
+                                                <%= specialtyLabels[spec] || spec %>
+                                            </span>
+                                        <% } %>
+                                    <% }); %>
+                                <% } %>
+                            </div>
+
+                            <!-- Title and Preview -->
+                            <div class="group relative max-w-xl">
+                                <h3 class="mt-3 text-lg/6 font-semibold text-gray-900 group-hover:text-gray-600">
+                                    <button onclick="openBlogModal(<%= index %>, '<%= post.id || index %>')" class="text-left relative z-10">
+                                        <%= lang === 'tr' ? post.titleTr : post.titleDe %>
+                                    </button>
+                                </h3>
+                                
+                                <% 
+                                let processedText = text || '';
+                                const fullText = processedText;
+                                
+                                // Replace all possible line break formats
+                                // Handle both literal \r\n and escaped \\r\\n (from JSON)
+                                processedText = processedText.replace(/\\r\\n/g, ' '); // Handle escaped sequences first
+                                processedText = processedText.replace(/\r\n/g, ' '); // Handle literal sequences
+                                processedText = processedText.replace(/\r/g, ' '); // Handle just \r
+                                processedText = processedText.replace(/\n/g, ' '); // Handle just \n
+                                
+                                // Remove [PHOTO1] and [PHOTO2] markers since we only show photo1 on the left
+                                processedText = processedText.replace(/\[PHOTO1\]/g, '');
+                                processedText = processedText.replace(/\[PHOTO2\]/g, '');
+                                
+                                // Split into words and limit to 250 words
+                                const words = processedText.split(/\s+/).filter(w => w.trim());
+                                const wordLimit = 250;
+                                const isTruncated = words.length > wordLimit;
+                                const truncatedText = isTruncated ? words.slice(0, wordLimit).join(' ') + '...' : processedText;
+                                
+                                // Convert all remaining whitespace to single spaces for clean preview
+                                const previewText = truncatedText.replace(/\s+/g, ' ').trim();
+                                %>
+                                <p class="mt-5 text-sm/6 text-gray-600"><%= previewText %></p>
+                                
+                                <% 
+                                // Show specialty search button if there are specialties
+                                if (validSpecialties.length > 0) {
+                                    // Use first specialty for the search link (server expects single specialty parameter)
+                                    const firstSpecialty = validSpecialties[0];
+                                    // Build URL - ensure specialty value is properly encoded
+                                    const specialtyParam = encodeURIComponent(firstSpecialty);
+                                    let specialtyUrl = '/?specialty=' + specialtyParam;
+                                    // Preserve language parameter if not German
+                                    if (lang && lang !== 'de' && lang !== '') {
+                                        specialtyUrl += '&lang=' + encodeURIComponent(lang);
+                                    }
+                                    const buttonText = lang === 'tr' 
+                                        ? 'Bu konu ile ilgili daha fazla bilgi almak isterseniz, Doktorlarımız size memnuniyetle yardımcı olacaktır.'
+                                        : 'Haben Sie mehr Fragen? Unsere Ärzt*innen beraten Sie gerne';
+                                %>
+                                    <div class="mt-6 relative z-20">
+                                        <a href="<%= specialtyUrl %>" 
+                                           style="background-color: #4338ca; color: white; position: relative; z-index: 20;" 
+                                           class="inline-flex items-center px-4 py-2 hover:bg-indigo-800 text-sm font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 no-underline cursor-pointer">
+                                            <span><%= buttonText %></span>
+                                            <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                                            </svg>
+                                        </a>
+                                    </div>
+                                <% } %>
+                            </div>
+
+                            <!-- Store full text and photo data for modal -->
+                            <script>
+                                if (!window.blogPostsData) window.blogPostsData = {};
+                                window.blogPostsData[<%= index %>] = {
+                                    id: '<%= post.id || index %>',
+                                    title: '<%= (lang === 'tr' ? post.titleTr : post.titleDe).replace(/'/g, "\\'") %>',
+                                    text: <%= JSON.stringify(fullText.replace(/\[PHOTO1\]/g, '').replace(/\[PHOTO2\]/g, '')) %>,
+                                    photo1: '<%= post.photo1 || '' %>',
+                                    photo2: '<%= post.photo2 || '' %>',
+                                    lang: '<%= lang %>',
+                                    specialties: <%= JSON.stringify(validSpecialties) %>
+                                };
+                            </script>
+                        </div>
+                    </article>
+                <% }); %>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.blog-content {
+    line-height: 1.6;
+    font-size: 0.875rem;
+    color: #4B5563;
+}
+</style>
+
+<!-- Blog Modal -->
+<div id="blogModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                <h3 id="modalTitle" class="text-2xl font-bold text-gray-900"></h3>
+                <button onclick="closeBlogModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <div id="modalContent" class="blog-content text-gray-700 text-sm leading-relaxed text-justify"></div>
+                <div id="modalInquiryLink" class="mt-6"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openBlogModal(index, postId) {
+    const data = window.blogPostsData[index];
+    if (!data) return;
+    
+    // Set title
+    document.getElementById('modalTitle').textContent = data.title;
+    
+    // Process and display full text
+    let processedText = data.text || '';
+    
+    // Replace all possible line break formats (JSON.stringify may escape them)
+    // Handle both literal \r\n and escaped \\r\\n
+    processedText = processedText.replace(/\\r\\n/g, '\n'); // Handle escaped sequences from JSON.stringify
+    processedText = processedText.replace(/\r\n/g, '\n'); // Handle literal sequences
+    processedText = processedText.replace(/\r/g, '\n'); // Handle just \r
+    processedText = processedText.replace(/\n\n+/g, '\n\n'); // Normalize multiple line breaks to double
+    
+    // Handle photo markers - embed photos if they exist
+    if (data.photo1) {
+        processedText = processedText.replace(/\[PHOTO1\]/g, `<img src="/uploads/${data.photo1}" alt="" class="float-left mr-4 mb-4 max-w-[300px] h-auto rounded-lg">`);
+    } else {
+        processedText = processedText.replace(/\[PHOTO1\]/g, '');
+    }
+    
+    if (data.photo2) {
+        processedText = processedText.replace(/\[PHOTO2\]/g, `<img src="/uploads/${data.photo2}" alt="" class="float-right ml-4 mb-4 max-w-[200px] h-auto rounded-lg">`);
+    } else {
+        processedText = processedText.replace(/\[PHOTO2\]/g, '');
+    }
+    
+    // Convert to paragraphs - split on double line breaks
+    const paragraphs = processedText.split(/\n\n+/).filter(p => p.trim());
+    let htmlContent = paragraphs.map(p => {
+        const trimmed = p.trim();
+        if (!trimmed) return '';
+        // Replace single line breaks within paragraphs with <br>
+        return '<p class="mb-4">' + trimmed.replace(/\n/g, '<br>') + '</p>';
+    }).join('');
+    
+    // Add photo at top if not embedded
+    if (data.photo1 && !data.text.includes('[PHOTO1]')) {
+        htmlContent = `<img src="/uploads/${data.photo1}" alt="" class="w-full max-w-md mx-auto mb-6 rounded-lg">` + htmlContent;
+    }
+    
+    document.getElementById('modalContent').innerHTML = htmlContent;
+    
+    // Add inquiry link button if specialties exist
+    const inquiryLinkDiv = document.getElementById('modalInquiryLink');
+    if (data.specialties && data.specialties.length > 0) {
+        const specialtyParams = data.specialties.map(s => 'specialty=' + encodeURIComponent(s)).join('&');
+        const linkText = data.lang === 'tr' 
+            ? 'Bu konu ile ilgili daha fazla bilgi almak isterseniz, Doktorlarımız size memnuniyetle yardımcı olacaktır.'
+            : 'Haben Sie mehr Fragen? Unsere Ärzt*innen beraten Sie gerne';
+        
+        inquiryLinkDiv.innerHTML = `
+            <a href="/?${specialtyParams}" 
+               style="background-color: #4338ca; color: white;" 
+               class="inline-flex items-center px-4 py-2 hover:bg-indigo-800 text-sm font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200">
+                <span>${linkText}</span>
+                <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                </svg>
+            </a>
+        `;
+    } else {
+        inquiryLinkDiv.innerHTML = '';
+    }
+    
+    document.getElementById('blogModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeBlogModal() {
+    document.getElementById('blogModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeBlogModal();
+    }
+});
+
+// Close modal when clicking outside
+document.getElementById('blogModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeBlogModal();
+    }
+});
+</script>
+<% } %>
+

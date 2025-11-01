@@ -64,15 +64,31 @@
                                         <% } %>
                                     </div>
                                     <p class="mt-3 text-sm leading-6 text-gray-700">Erlaubte Formate: JPG, JPEG, PNG. Maximale Größe: 4MB. Empfohlene Auflösung: 1200x1200 Pixel.</p>
+                                    <p class="mt-2 text-sm text-gray-500">
+                                        Um in "Unsere Ärzt*innen näher kennen lernen" zu erscheinen, laden Sie bitte mindestens 1 Profilfoto und 1 Foto Ihrer Ordination hoch und beschreiben Sie Ihre Leistungen mit mindestens 400 Zeichen.
+                                    </p>
                                 </div>
 
                                 <!-- Über mich -->
                                 <div class="col-span-full">
                                     <label for="additionalInfo" class="block text-sm font-semibold text-gray-800 mb-2 ">Über mich</label>
                                     <div class="mt-2">
-                                        <textarea id="additionalInfo" name="additionalInfo" rows="6" class="block w-full border border-gray-300 rounded-lg p-3 border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6"><%= doctor.additionalInfo || '' %></textarea>
+                                        <textarea id="additionalInfo" name="additionalInfo" rows="6" class="block w-full border border-gray-300 rounded-lg p-3 border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6" oninput="updateCharCount()"><%= doctor.additionalInfo || '' %></textarea>
                                     </div>
-                                    <p class="mt-3 text-sm leading-6 text-gray-700">Ein paar Sätze über Sie und Ihre Praxis.</p>
+                                    <div class="mt-2 flex items-center justify-between">
+                                        <p class="text-sm leading-6 text-gray-700">Ein paar Sätze über Sie und Ihre Praxis.</p>
+                                        <span id="charCount" class="text-sm font-medium text-gray-500">
+                                            <%= (doctor.additionalInfo || '').length %> / 400 Zeichen
+                                        </span>
+                                    </div>
+                                    <% const charCount = (doctor.additionalInfo || '').trim().length; %>
+                                    <% if (charCount < 400) { %>
+                                        <div class="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                            <p class="text-sm text-yellow-800">
+                                                <strong>Hinweis:</strong> Mindestens 400 Zeichen erforderlich, um im Abschnitt "Unsere Ärzt*innen näher kennen lernen" zu erscheinen.
+                                            </p>
+                                        </div>
+                                    <% } %>
                                 </div>
 
                             </div>
@@ -798,6 +814,38 @@
         }
 
         loadGoogleMapsAPI();
+
+        // Character counter for additionalInfo textarea
+        function updateCharCount() {
+            const textarea = document.getElementById('additionalInfo');
+            const charCount = document.getElementById('charCount');
+            if (textarea && charCount) {
+                const length = textarea.value.length;
+                charCount.textContent = length + ' / 400 Zeichen';
+                
+                // Update color based on count
+                if (length < 400) {
+                    charCount.classList.remove('text-green-600');
+                    charCount.classList.add('text-yellow-600');
+                } else {
+                    charCount.classList.remove('text-yellow-600');
+                    charCount.classList.add('text-green-600');
+                }
+                
+                // Show/hide warning message
+                const warningDiv = document.querySelector('.bg-yellow-50');
+                if (warningDiv) {
+                    if (length >= 400) {
+                        warningDiv.style.display = 'none';
+                    } else {
+                        warningDiv.style.display = 'block';
+                    }
+                }
+            }
+        }
+
+        // Initialize character count on page load
+        updateCharCount();
     </script>
 </body>
 </html>

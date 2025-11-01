@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog-Verwaltung - Doktorum nerede</title>
+    <link href="/css/output.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="h-full bg-gray-50 font-sans antialiased">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 py-3 sm:py-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+                    <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Blog-Verwaltung</h1>
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-4 sm:space-x-4">
+                        <a href="/admin" class="text-blue-600 hover:text-blue-700 font-bold text-sm sm:text-base transition-all duration-200 ease-in-out">Zurück zum Dashboard</a>
+                        <a href="/" class="text-blue-600 hover:text-blue-700 font-bold text-sm sm:text-base transition-all duration-200 ease-in-out">Zur Hauptseite</a>
+                        <form action="/logout" method="POST" class="inline">
+                            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 ease-in-out text-sm sm:text-base">Abmelden</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+            <div class="bg-white shadow-md rounded-2xl p-4 sm:p-6 hover:shadow-lg transition-all duration-200 ease-in-out">
+                <% if (success) { %>
+                    <div class="mb-4 sm:mb-6 rounded-xl bg-green-50 p-3 sm:p-4 border border-green-200">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-base font-bold text-green-800"><%= success %></h3>
+                            </div>
+                        </div>
+                    </div>
+                <% } %>
+
+                <div class="mb-6">
+                    <a href="/admin/blog/new" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 ease-in-out">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Neuer Blog-Post
+                    </a>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Titel (DE)</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Titel (TR)</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fachbereiche</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Erstellt</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <% if (blogPosts && blogPosts.length > 0) { %>
+                                <% blogPosts.forEach(post => { %>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                            <%= post.titleDe || '(Kein Titel)' %>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <%= post.titleTr || '(Kein Titel)' %>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">
+                                            <%= (post.specialties && post.specialties.length > 0) ? post.specialties.join(', ') : 'Keine' %>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <%= post.createdAt ? new Date(post.createdAt).toLocaleDateString('de-DE') : '-' %>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <a href="/admin/blog/edit/<%= post.id %>" class="text-blue-600 hover:text-blue-900 mr-4">Bearbeiten</a>
+                                            <a href="/admin/blog/delete/<%= post.id %>" onclick="return confirm('Möchten Sie diesen Blog-Post wirklich löschen?');" class="text-red-600 hover:text-red-900">Löschen</a>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                                        Keine Blog-Posts vorhanden. Erstellen Sie einen neuen Post.
+                                    </td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
+

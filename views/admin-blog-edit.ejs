@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= isNew ? 'Neuer Blog-Post' : 'Blog-Post bearbeiten' %> - Doktorum nerede</title>
+    <link href="/css/output.css" rel="stylesheet">
+</head>
+<body class="h-full bg-gray-50 font-sans antialiased">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 py-3 sm:py-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+                    <h1 class="text-xl sm:text-2xl font-bold text-gray-900"><%= isNew ? 'Neuer Blog-Post' : 'Blog-Post bearbeiten' %></h1>
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-4 sm:space-x-4">
+                        <a href="/admin/blog" class="text-blue-600 hover:text-blue-700 font-bold text-sm sm:text-base transition-all duration-200 ease-in-out">Zurück zur Liste</a>
+                        <a href="/admin" class="text-blue-600 hover:text-blue-700 font-bold text-sm sm:text-base transition-all duration-200 ease-in-out">Dashboard</a>
+                        <form action="/logout" method="POST" class="inline">
+                            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 ease-in-out text-sm sm:text-base">Abmelden</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+            <form action="<%= isNew ? '/admin/blog' : '/admin/blog/' + post.id %>" method="POST" enctype="multipart/form-data" class="bg-white shadow-md rounded-2xl p-6 sm:p-8">
+                <!-- German Title -->
+                <div class="mb-6">
+                    <label for="titleDe" class="block text-sm font-semibold text-gray-800 mb-2">Titel (Deutsch) *</label>
+                    <input type="text" id="titleDe" name="titleDe" value="<%= post ? post.titleDe : '' %>" required
+                        class="w-full border border-gray-300 rounded-lg p-3 text-base font-medium text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out">
+                </div>
+
+                <!-- German Text -->
+                <div class="mb-6">
+                    <label for="textDe" class="block text-sm font-semibold text-gray-800 mb-2">Text (Deutsch) *</label>
+                    <textarea id="textDe" name="textDe" rows="12" required
+                        class="w-full border border-gray-300 rounded-lg p-3 text-base font-medium text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out"><%= post ? post.textDe : '' %></textarea>
+                    <p class="mt-2 text-sm text-gray-500">Sie können Bilder in den Text einbetten. Verwenden Sie [PHOTO1] für das erste Bild und [PHOTO2] für das zweite Bild an der gewünschten Stelle im Text.</p>
+                </div>
+
+                <!-- Turkish Title -->
+                <div class="mb-6">
+                    <label for="titleTr" class="block text-sm font-semibold text-gray-800 mb-2">Titel (Türkisch) *</label>
+                    <input type="text" id="titleTr" name="titleTr" value="<%= post ? post.titleTr : '' %>" required
+                        class="w-full border border-gray-300 rounded-lg p-3 text-base font-medium text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out">
+                </div>
+
+                <!-- Turkish Text -->
+                <div class="mb-6">
+                    <label for="textTr" class="block text-sm font-semibold text-gray-800 mb-2">Text (Türkisch) *</label>
+                    <textarea id="textTr" name="textTr" rows="12" required
+                        class="w-full border border-gray-300 rounded-lg p-3 text-base font-medium text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out"><%= post ? post.textTr : '' %></textarea>
+                    <p class="mt-2 text-sm text-gray-500">Metne görseller ekleyebilirsiniz. İstediğiniz yerde ilk görsel için [PHOTO1] ve ikinci görsel için [PHOTO2] kullanın.</p>
+                </div>
+
+                <!-- Photo 1 -->
+                <div class="mb-6" id="photo1Container">
+                    <label for="blogPhoto1" class="block text-sm font-semibold text-gray-800 mb-2">Foto 1</label>
+                    <% if (post && post.photo1) { %>
+                        <div class="mb-3 relative inline-block">
+                            <img src="/uploads/<%= post.photo1 %>" alt="Foto 1" class="max-w-md h-auto rounded-lg shadow-md" id="photo1Img">
+                            <button type="button" onclick="deletePhoto1()" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-2 shadow-lg z-10">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-500 mb-2">Aktuelles Foto</p>
+                    <% } %>
+                    <input type="hidden" id="deletePhoto1" name="deletePhoto1" value="0">
+                    <input type="file" id="blogPhoto1" name="blogPhoto1" accept="image/*"
+                        class="w-full border border-gray-300 rounded-lg p-3 text-base font-medium text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out">
+                </div>
+
+                <!-- Photo 2 -->
+                <div class="mb-6" id="photo2Container">
+                    <label for="blogPhoto2" class="block text-sm font-semibold text-gray-800 mb-2">Foto 2</label>
+                    <% if (post && post.photo2) { %>
+                        <div class="mb-3 relative inline-block">
+                            <img src="/uploads/<%= post.photo2 %>" alt="Foto 2" class="max-w-md h-auto rounded-lg shadow-md" id="photo2Img">
+                            <button type="button" onclick="deletePhoto2()" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-2 shadow-lg z-10">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-500 mb-2">Aktuelles Foto</p>
+                    <% } %>
+                    <input type="hidden" id="deletePhoto2" name="deletePhoto2" value="0">
+                    <input type="file" id="blogPhoto2" name="blogPhoto2" accept="image/*"
+                        class="w-full border border-gray-300 rounded-lg p-3 text-base font-medium text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out">
+                </div>
+
+                <script>
+                    window.deletePhoto1 = function() {
+                        if (confirm('Möchten Sie Foto 1 wirklich löschen?')) {
+                            const deleteInput = document.getElementById('deletePhoto1');
+                            if (deleteInput) {
+                                deleteInput.value = '1';
+                            }
+                            const img = document.querySelector('#blogPhoto1').closest('.mb-6').querySelector('img');
+                            if (img) {
+                                img.style.opacity = '0.3';
+                                img.style.textDecoration = 'line-through';
+                            }
+                        }
+                    };
+                    
+                    window.deletePhoto2 = function() {
+                        if (confirm('Möchten Sie Foto 2 wirklich löschen?')) {
+                            const deleteInput = document.getElementById('deletePhoto2');
+                            if (deleteInput) {
+                                deleteInput.value = '1';
+                            }
+                            const img = document.querySelector('#blogPhoto2').closest('.mb-6').querySelector('img');
+                            if (img) {
+                                img.style.opacity = '0.3';
+                                img.style.textDecoration = 'line-through';
+                            }
+                        }
+                    };
+                </script>
+
+                <!-- Specialties -->
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-800 mb-2">Relevante Fachbereiche</label>
+                    <div class="flex gap-2 mb-2">
+                        <select id="specialtySelect" class="flex-1 border border-gray-300 rounded-lg p-3 text-base font-medium text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out">
+                            <option value="">-- Fachbereich auswählen --</option>
+                            <% Object.entries(specialties).forEach(([key, value]) => { %>
+                                <% if (key !== 'male' && key !== 'female') { %>
+                                    <option value="<%= key %>"><%= value %></option>
+                                <% } %>
+                            <% }); %>
+                        </select>
+                        <button type="button" id="addSpecialtyBtn" class="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 ease-in-out">
+                            Hinzufügen
+                        </button>
+                    </div>
+                    <div id="selectedSpecialties" class="flex flex-wrap gap-2 mb-2 min-h-[50px] p-3 border border-gray-300 rounded-lg bg-gray-50"></div>
+                    <!-- Hidden input to store selected specialties -->
+                    <input type="hidden" id="specialtiesInput" name="specialties" value="<%= post && post.specialties && Array.isArray(post.specialties) ? JSON.stringify(post.specialties.filter(s => s !== 'male' && s !== 'female')) : '[]' %>">
+                </div>
+
+                <script>
+                    (function() {
+                        const specialties = <%= JSON.stringify(specialties) %>;
+                        let selectedSpecialties = <%= post && post.specialties && Array.isArray(post.specialties) ? JSON.stringify(post.specialties.filter(s => s !== 'male' && s !== 'female')) : '[]' %>;
+
+                        function updateSpecialtiesDisplay() {
+                            const container = document.getElementById('selectedSpecialties');
+                            if (!container) return;
+                            
+                            const filtered = selectedSpecialties.filter(s => s !== 'male' && s !== 'female');
+                            
+                            if (filtered.length === 0) {
+                                container.innerHTML = '<p class="text-sm text-gray-400">Keine Fachbereiche ausgewählt</p>';
+                                return;
+                            }
+                            
+                            container.innerHTML = filtered.map(spec => {
+                                const displayName = specialties[spec] || spec;
+                                const escapedSpec = spec.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                                return `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 specialty-tag" data-spec="${escapedSpec}">
+                                    ${displayName}
+                                    <button type="button" class="remove-specialty-btn ml-2 text-blue-600 hover:text-blue-800" data-spec="${escapedSpec}" onclick="removeSpecialtyFromList('${escapedSpec}')">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </span>`;
+                            }).join('');
+                        }
+
+                        function updateHiddenInput() {
+                            const input = document.getElementById('specialtiesInput');
+                            if (!input) return;
+                            const filtered = selectedSpecialties.filter(s => s !== 'male' && s !== 'female');
+                            input.value = JSON.stringify(filtered);
+                        }
+
+                        window.addSpecialty = function() {
+                            const select = document.getElementById('specialtySelect');
+                            if (!select) {
+                                console.error('specialtySelect element not found');
+                                return false;
+                            }
+                            const value = select.value;
+                            if (!value || value === 'male' || value === 'female' || value === '') {
+                                alert('Bitte wählen Sie einen gültigen Fachbereich aus.');
+                                return false;
+                            }
+                            
+                            if (!selectedSpecialties.includes(value)) {
+                                selectedSpecialties.push(value);
+                                updateSpecialtiesDisplay();
+                                updateHiddenInput();
+                            }
+                            select.value = '';
+                            return false;
+                        };
+
+                        window.removeSpecialtyFromList = function(value) {
+                            if (!value) return false;
+                            selectedSpecialties = selectedSpecialties.filter(s => s !== value && s !== 'male' && s !== 'female');
+                            updateSpecialtiesDisplay();
+                            updateHiddenInput();
+                            return false;
+                        };
+
+                        window.removeSpecialty = window.removeSpecialtyFromList;
+
+                        // Initialize immediately
+                        updateSpecialtiesDisplay();
+                        updateHiddenInput();
+
+                        // Attach button listener directly
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const addBtn = document.getElementById('addSpecialtyBtn');
+                            if (addBtn) {
+                                addBtn.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    window.addSpecialty();
+                                    return false;
+                                });
+                                addBtn.onclick = function(e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    window.addSpecialty();
+                                    return false;
+                                };
+                            }
+                        });
+
+                        // Also attach immediately if DOM is ready
+                        if (document.readyState !== 'loading') {
+                            const addBtn = document.getElementById('addSpecialtyBtn');
+                            if (addBtn) {
+                                addBtn.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    window.addSpecialty();
+                                    return false;
+                                });
+                                addBtn.onclick = function(e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    window.addSpecialty();
+                                    return false;
+                                };
+                            }
+                        }
+                    })();
+                </script>
+
+                <!-- Submit Button -->
+                <div class="flex justify-end gap-4">
+                    <a href="/admin/blog" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 ease-in-out">
+                        Abbrechen
+                    </a>
+                    <button type="submit" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 ease-in-out">
+                        <%= isNew ? 'Erstellen' : 'Speichern' %>
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+</body>
+</html>
+

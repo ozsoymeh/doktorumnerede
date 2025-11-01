@@ -85,9 +85,21 @@ try {
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         if (file.fieldname === 'excel') {
-            cb(null, 'data/');
+            cb(null, path.join(__dirname, 'data'));
         } else if (file.fieldname === 'photo' || file.fieldname === 'galleryPhotos') {
-            cb(null, 'public/uploads/temp/');
+            const tempDir = path.join(__dirname, 'public', 'uploads', 'temp');
+            // Ensure temp directory exists
+            if (!fs.existsSync(tempDir)) {
+                fs.mkdirSync(tempDir, { recursive: true });
+            }
+            cb(null, tempDir);
+        } else if (file.fieldname === 'blogPhoto1' || file.fieldname === 'blogPhoto2') {
+            const tempDir = path.join(__dirname, 'public', 'uploads', 'temp');
+            // Ensure temp directory exists
+            if (!fs.existsSync(tempDir)) {
+                fs.mkdirSync(tempDir, { recursive: true });
+            }
+            cb(null, tempDir);
         }
     },
     filename: function (req, file, cb) {
@@ -96,12 +108,15 @@ const storage = multer.diskStorage({
         } else if (file.fieldname === 'photo' || file.fieldname === 'galleryPhotos') {
             const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
             cb(null, uniqueSuffix + path.extname(file.originalname));
+        } else if (file.fieldname === 'blogPhoto1' || file.fieldname === 'blogPhoto2') {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            cb(null, uniqueSuffix + path.extname(file.originalname));
         }
     }
 });
 
 const fileFilter = (req, file, cb) => {
-    if (file.fieldname === 'photo' || file.fieldname === 'galleryPhotos') {
+    if (file.fieldname === 'photo' || file.fieldname === 'galleryPhotos' || file.fieldname === 'blogPhoto1' || file.fieldname === 'blogPhoto2') {
         // Überprüfe Dateityp
         if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
             return cb(new Error('Nur JPG, JPEG und PNG Dateien sind erlaubt!'), false);
@@ -335,6 +350,27 @@ function generatePassword() {
     return password;
 }
 
+// Function to get doctors with profile photos for carousel (random order)
+function getFeaturedDoctors(doctors) {
+    // Filter doctors that have profile photos and are approved
+    const qualifiedDoctors = doctors.filter(doctor => {
+        return doctor.isApproved && doctor.photo;
+    });
+    
+    if (qualifiedDoctors.length === 0) {
+        return [];
+    }
+    
+    // Shuffle array for random order
+    const shuffled = [...qualifiedDoctors];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    return shuffled;
+}
+
 // Funktion zur Formatierung des URL-Slugs
 function formatNameForUrl(firstName, lastName) {
     return `${firstName}-${lastName}`
@@ -540,6 +576,32 @@ function saveDoctors(doctors) {
     }
 }
 
+function getBlogPosts() {
+    const blogPath = path.join(__dirname, 'data', 'blogposts.json');
+    try {
+        if (!fs.existsSync(blogPath)) {
+            return [];
+        }
+        return JSON.parse(fs.readFileSync(blogPath, 'utf8'));
+    } catch (error) {
+        console.error('Fehler beim Laden der Blogposts:', error);
+        return [];
+    }
+}
+
+function saveBlogPosts(posts) {
+    const blogPath = path.join(__dirname, 'data', 'blogposts.json');
+    try {
+        fs.writeFileSync(
+            blogPath,
+            JSON.stringify(posts, null, 2),
+            'utf8'
+        );
+    } catch (error) {
+        console.error('Fehler beim Speichern der Blogposts:', error);
+    }
+}
+
 // Routes
 app.get('/', (req, res) => {
     const { name, specialty, city, zipCode } = req.query;
@@ -612,6 +674,12 @@ app.get('/', (req, res) => {
     if (zipCode) queryParams.set('zipCode', zipCode);
     if (lang && lang !== 'de') queryParams.set('lang', lang);
     
+    // Get featured doctors for carousel (all doctors with profile photos, randomized)
+    const featuredDoctors = getFeaturedDoctors(doctors);
+    
+    // Get blog posts
+    const blogPosts = getBlogPosts().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    
     res.render('index', {
         title: 'Doktorum nerede - Avusturya',
         doctors: paginatedDoctors,
@@ -621,6 +689,8 @@ app.get('/', (req, res) => {
         doctorsPerPage,
         cities,
         zipCodes,
+        featuredDoctors,
+        blogPosts,
         formatNameForUrl,
         lang,
         queryParams: queryParams.toString(),
@@ -1049,84 +1119,144 @@ app.post('/profile/edit', requireAuth, upload.fields([
 
         // Profilfoto verarbeiten (nur wenn vorhanden)
         if (req.files && req.files.photo && req.files.photo[0]) {
-            const photo = req.files.photo[0];
-            const photoFileName = `profile-${Date.now()}.jpg`;
-            
-            // Altes Foto löschen falls vorhanden
-            if (doctors[doctorIndex].photo) {
-                const oldPhotoPath = path.join(__dirname, 'public', 'uploads', doctors[doctorIndex].photo);
-                try {
-                    await fsPromises.unlink(oldPhotoPath);
-                } catch (error) {
-                    console.error('Fehler beim Löschen des alten Fotos:', error);
+            try {
+                const photo = req.files.photo[0];
+                const photoFileName = `profile-${Date.now()}.jpg`;
+                const uploadsDir = path.join(__dirname, 'public', 'uploads');
+                
+                // Ensure uploads directory exists
+                if (!fs.existsSync(uploadsDir)) {
+                    fs.mkdirSync(uploadsDir, { recursive: true });
                 }
-            }
+                
+                // Altes Foto löschen falls vorhanden
+                if (doctors[doctorIndex].photo) {
+                    const oldPhotoPath = path.join(uploadsDir, doctors[doctorIndex].photo);
+                    try {
+                        if (fs.existsSync(oldPhotoPath)) {
+                            await fsPromises.unlink(oldPhotoPath);
+                            console.log('Old photo deleted:', oldPhotoPath);
+                        }
+                    } catch (error) {
+                        console.error('Fehler beim Löschen des alten Fotos:', error);
+                    }
+                }
 
-            await sharp(photo.path)
-                .resize(1200, 1200, { fit: 'cover' })
-                .jpeg({ quality: 90 })
-                .toFile(path.join(__dirname, 'public', 'uploads', photoFileName));
-            
-            // Temporäre Datei löschen
-            await fsPromises.unlink(photo.path);
-            
-            updatedDoctor.photo = photoFileName;
+                const destPath = path.join(uploadsDir, photoFileName);
+                console.log('Processing photo upload:', {
+                    source: photo.path,
+                    destination: destPath,
+                    originalName: photo.originalname
+                });
+
+                await sharp(photo.path)
+                    .resize(1200, 1200, { fit: 'cover' })
+                    .jpeg({ quality: 90 })
+                    .toFile(destPath);
+                
+                // Verify file was created
+                if (!fs.existsSync(destPath)) {
+                    throw new Error('Photo file was not created after processing');
+                }
+                
+                console.log('Photo successfully saved to:', destPath);
+                
+                // Temporäre Datei löschen
+                try {
+                    await fsPromises.unlink(photo.path);
+                } catch (error) {
+                    console.error('Fehler beim Löschen der temporären Datei:', error);
+                }
+                
+                updatedDoctor.photo = photoFileName;
+                console.log('Updated doctor photo field to:', photoFileName);
+            } catch (photoError) {
+                console.error('Fehler beim Verarbeiten des Profilfotos:', photoError);
+                req.session.message = {
+                    type: 'error',
+                    text: 'Fehler beim Hochladen des Profilfotos: ' + photoError.message
+                };
+            }
         }
 
         // Galeriefotos verarbeiten (nur wenn vorhanden)
-        if (req.files && req.files.galleryPhotos) {
-            const existingPhotos = doctors[doctorIndex].galleryPhotos || [];
-            const remainingSlots = 3 - existingPhotos.length;
-            
-            if (remainingSlots > 0) {
-                const newGalleryPhotos = [];
-                const photosToProcess = req.files.galleryPhotos.slice(0, remainingSlots); // Limit to available slots
+        if (req.files && req.files.galleryPhotos && req.files.galleryPhotos.length > 0) {
+            try {
+                const existingPhotos = doctors[doctorIndex].galleryPhotos || [];
+                const remainingSlots = 3 - existingPhotos.length;
+                const uploadsDir = path.join(__dirname, 'public', 'uploads');
                 
-                for (const photo of photosToProcess) {
-                    const photoFileName = `gallery-${Date.now()}-${Math.round(Math.random() * 1E9)}.jpg`;
-                    
-                    await sharp(photo.path)
-                        .resize(800, 600, { fit: 'cover' })
-                        .jpeg({ quality: 90 })
-                        .toFile(path.join(__dirname, 'public', 'uploads', photoFileName));
-                    
-                    // Temporäre Datei löschen
-                    await fsPromises.unlink(photo.path);
-                    
-                    newGalleryPhotos.push(photoFileName);
+                // Ensure uploads directory exists
+                if (!fs.existsSync(uploadsDir)) {
+                    fs.mkdirSync(uploadsDir, { recursive: true });
                 }
-
-                // Bereinige nicht verarbeitete Dateien (falls mehr als remainingSlots hochgeladen wurden)
-                if (req.files.galleryPhotos.length > remainingSlots) {
-                    for (let i = remainingSlots; i < req.files.galleryPhotos.length; i++) {
+                
+                if (remainingSlots > 0) {
+                    const newGalleryPhotos = [];
+                    const photosToProcess = req.files.galleryPhotos.slice(0, remainingSlots); // Limit to available slots
+                    
+                    for (const photo of photosToProcess) {
+                        const photoFileName = `gallery-${Date.now()}-${Math.round(Math.random() * 1E9)}.jpg`;
+                        const destPath = path.join(uploadsDir, photoFileName);
+                        
+                        await sharp(photo.path)
+                            .resize(800, 600, { fit: 'cover' })
+                            .jpeg({ quality: 90 })
+                            .toFile(destPath);
+                        
+                        // Verify file was created
+                        if (!fs.existsSync(destPath)) {
+                            throw new Error('Gallery photo file was not created after processing');
+                        }
+                        
+                        // Temporäre Datei löschen
                         try {
-                            await fsPromises.unlink(req.files.galleryPhotos[i].path);
+                            await fsPromises.unlink(photo.path);
                         } catch (error) {
-                            console.error('Fehler beim Löschen der nicht verarbeiteten Datei:', error);
+                            console.error('Fehler beim Löschen der temporären Galeriedatei:', error);
+                        }
+                        
+                        newGalleryPhotos.push(photoFileName);
+                    }
+
+                    // Bereinige nicht verarbeitete Dateien (falls mehr als remainingSlots hochgeladen wurden)
+                    if (req.files.galleryPhotos.length > remainingSlots) {
+                        for (let i = remainingSlots; i < req.files.galleryPhotos.length; i++) {
+                            try {
+                                await fsPromises.unlink(req.files.galleryPhotos[i].path);
+                            } catch (error) {
+                                console.error('Fehler beim Löschen der nicht verarbeiteten Datei:', error);
+                            }
+                        }
+                        if (!req.session.message) {
+                            req.session.message = {
+                                type: 'info',
+                                text: `${photosToProcess.length} Foto(s) hinzugefügt. Sie haben bereits 3 Ordinationsfotos (Maximum).`
+                            };
                         }
                     }
-                    if (!req.session.message) {
-                        req.session.message = {
-                            type: 'info',
-                            text: `${photosToProcess.length} Foto(s) hinzugefügt. Sie haben bereits 3 Ordinationsfotos (Maximum).`
-                        };
-                    }
-                }
 
-                // Neue Fotos zu bestehenden hinzufügen (nicht ersetzen!)
-                updatedDoctor.galleryPhotos = [...existingPhotos, ...newGalleryPhotos];
-            } else {
-                // Wenn bereits 3 Fotos vorhanden, alle temporären Dateien löschen
-                for (const photo of req.files.galleryPhotos) {
-                    try {
-                        await fsPromises.unlink(photo.path);
-                    } catch (error) {
-                        console.error('Fehler beim Löschen der temporären Datei:', error);
+                    // Neue Fotos zu bestehenden hinzufügen (nicht ersetzen!)
+                    updatedDoctor.galleryPhotos = [...existingPhotos, ...newGalleryPhotos];
+                } else {
+                    // Wenn bereits 3 Fotos vorhanden, alle temporären Dateien löschen
+                    for (const photo of req.files.galleryPhotos) {
+                        try {
+                            await fsPromises.unlink(photo.path);
+                        } catch (error) {
+                            console.error('Fehler beim Löschen der temporären Datei:', error);
+                        }
                     }
+                    req.session.message = {
+                        type: 'info',
+                        text: 'Sie können maximal 3 Ordinationsfotos haben. Bitte löschen Sie zuerst ein Foto, um ein neues hochzuladen.'
+                    };
                 }
+            } catch (galleryError) {
+                console.error('Fehler beim Verarbeiten der Galeriefotos:', galleryError);
                 req.session.message = {
-                    type: 'info',
-                    text: 'Sie können maximal 3 Ordinationsfotos haben. Bitte löschen Sie zuerst ein Foto, um ein neues hochzuladen.'
+                    type: 'error',
+                    text: 'Fehler beim Hochladen der Galeriefotos: ' + galleryError.message
                 };
             }
         }
@@ -1166,20 +1296,25 @@ app.post('/profile/edit', requireAuth, upload.fields([
             zipCode: updatedDoctor.zipCode,
             city: updatedDoctor.city,
             insurance: updatedDoctor.insurance,
-            insuranceType: updatedDoctor.insuranceType
+            insuranceType: updatedDoctor.insuranceType,
+            photo: updatedDoctor.photo
         });
         
         // Verify the saved insurance values
         const savedDoctor = getDoctors().find(d => d.email === req.session.userId || req.session.doctorId);
         if (savedDoctor) {
             console.log('VERIFICATION - Saved insurance values:', savedDoctor.insurance);
+            console.log('VERIFICATION - Saved photo:', savedDoctor.photo);
         }
 
-        req.session.message = {
-            type: 'success',
-            text: 'Ihre Änderungen wurden erfolgreich gespeichert.'
-        };
-        req.session.success = true;
+        // Only set success message if no error message was already set (e.g., from photo upload failure)
+        if (!req.session.message || req.session.message.type !== 'error') {
+            req.session.message = {
+                type: 'success',
+                text: 'Ihre Änderungen wurden erfolgreich gespeichert.'
+            };
+            req.session.success = true;
+        }
 
         res.redirect('/profile');
     } catch (error) {
@@ -1736,6 +1871,212 @@ app.post('/admin/update/:email', requireAdmin, async (req, res) => {
         res.json({ success: true });
     } else {
         res.status(404).json({ success: false, message: 'Arzt nicht gefunden' });
+    }
+});
+
+// Blog Posts Management Routes
+app.get('/admin/blog', requireAdmin, (req, res) => {
+    const blogPosts = getBlogPosts().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    const success = req.query.success || null;
+    res.render('admin-blog', { blogPosts, success });
+});
+
+app.get('/admin/blog/new', requireAdmin, (req, res) => {
+    // Merge male and female specialties into one flat object, excluding 'male' and 'female' keys
+    const allSpecialties = { ...translations.de.specialties.male, ...translations.de.specialties.female };
+    res.render('admin-blog-edit', { post: null, specialties: allSpecialties, isNew: true });
+});
+
+app.get('/admin/blog/edit/:id', requireAdmin, (req, res) => {
+    const posts = getBlogPosts();
+    const post = posts.find(p => p.id === req.params.id);
+    if (!post) {
+        return res.status(404).send('Blog-Post nicht gefunden');
+    }
+    // Filter out 'male' and 'female' from saved specialties (they shouldn't be there)
+    if (post.specialties) {
+        post.specialties = post.specialties.filter(s => s !== 'male' && s !== 'female');
+    }
+    // Merge male and female specialties into one flat object
+    const allSpecialties = { ...translations.de.specialties.male, ...translations.de.specialties.female };
+    res.render('admin-blog-edit', { post, specialties: allSpecialties, isNew: false });
+});
+
+app.post('/admin/blog', requireAdmin, upload.fields([
+    { name: 'blogPhoto1', maxCount: 1 },
+    { name: 'blogPhoto2', maxCount: 1 }
+]), async (req, res) => {
+    try {
+        const posts = getBlogPosts();
+        const newPost = {
+            id: Date.now().toString(),
+            titleDe: req.body.titleDe || '',
+            textDe: req.body.textDe || '',
+            titleTr: req.body.titleTr || '',
+            textTr: req.body.textTr || '',
+            specialties: (() => {
+                if (typeof req.body.specialties === 'string') {
+                    try {
+                        const parsed = JSON.parse(req.body.specialties);
+                        return Array.isArray(parsed) ? parsed : [];
+                    } catch (e) {
+                        return Array.isArray(req.body.specialties) ? req.body.specialties : (req.body.specialties ? [req.body.specialties] : []);
+                    }
+                }
+                return Array.isArray(req.body.specialties) ? req.body.specialties : (req.body.specialties ? [req.body.specialties] : []);
+            })(),
+            photo1: '',
+            photo2: '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        // Process photos
+        if (req.files && req.files.blogPhoto1 && req.files.blogPhoto1[0]) {
+            const photoFile = req.files.blogPhoto1[0];
+            const destPath = path.join(__dirname, 'public', 'uploads', photoFile.filename);
+            await sharp(photoFile.path)
+                .resize(1200, 800, { fit: 'inside', withoutEnlargement: true })
+                .jpeg({ quality: 85 })
+                .toFile(destPath);
+            await fsPromises.unlink(photoFile.path);
+            newPost.photo1 = photoFile.filename;
+        }
+
+        if (req.files && req.files.blogPhoto2 && req.files.blogPhoto2[0]) {
+            const photoFile = req.files.blogPhoto2[0];
+            const destPath = path.join(__dirname, 'public', 'uploads', photoFile.filename);
+            await sharp(photoFile.path)
+                .resize(1200, 800, { fit: 'inside', withoutEnlargement: true })
+                .jpeg({ quality: 85 })
+                .toFile(destPath);
+            await fsPromises.unlink(photoFile.path);
+            newPost.photo2 = photoFile.filename;
+        }
+
+        posts.push(newPost);
+        saveBlogPosts(posts);
+        res.redirect('/admin/blog?success=Blog-Post erfolgreich erstellt');
+    } catch (error) {
+        console.error('Fehler beim Erstellen des Blog-Posts:', error);
+        res.status(500).send('Fehler beim Erstellen des Blog-Posts');
+    }
+});
+
+app.post('/admin/blog/:id', requireAdmin, upload.fields([
+    { name: 'blogPhoto1', maxCount: 1 },
+    { name: 'blogPhoto2', maxCount: 1 }
+]), async (req, res) => {
+    try {
+        const posts = getBlogPosts();
+        const postIndex = posts.findIndex(p => p.id === req.params.id);
+        if (postIndex === -1) {
+            return res.status(404).send('Blog-Post nicht gefunden');
+        }
+
+        const updatedPost = {
+            ...posts[postIndex],
+            titleDe: req.body.titleDe || '',
+            textDe: req.body.textDe || '',
+            titleTr: req.body.titleTr || '',
+            textTr: req.body.textTr || '',
+            specialties: (() => {
+                if (typeof req.body.specialties === 'string') {
+                    try {
+                        const parsed = JSON.parse(req.body.specialties);
+                        return Array.isArray(parsed) ? parsed : [];
+                    } catch (e) {
+                        return Array.isArray(req.body.specialties) ? req.body.specialties : (req.body.specialties ? [req.body.specialties] : []);
+                    }
+                }
+                return Array.isArray(req.body.specialties) ? req.body.specialties : (req.body.specialties ? [req.body.specialties] : []);
+            })(),
+            updatedAt: new Date().toISOString()
+        };
+
+        // Handle photo deletion
+        if (req.body.deletePhoto1 === '1') {
+            if (posts[postIndex].photo1) {
+                const oldPhotoPath = path.join(__dirname, 'public', 'uploads', posts[postIndex].photo1);
+                try { if (fs.existsSync(oldPhotoPath)) fs.unlinkSync(oldPhotoPath); } catch(_) {}
+            }
+            updatedPost.photo1 = '';
+        }
+
+        if (req.body.deletePhoto2 === '1') {
+            if (posts[postIndex].photo2) {
+                const oldPhotoPath = path.join(__dirname, 'public', 'uploads', posts[postIndex].photo2);
+                try { if (fs.existsSync(oldPhotoPath)) fs.unlinkSync(oldPhotoPath); } catch(_) {}
+            }
+            updatedPost.photo2 = '';
+        }
+
+        // Process photos (only if new ones uploaded)
+        if (req.files && req.files.blogPhoto1 && req.files.blogPhoto1[0]) {
+            // Delete old photo if exists
+            if (posts[postIndex].photo1) {
+                const oldPhotoPath = path.join(__dirname, 'public', 'uploads', posts[postIndex].photo1);
+                try { if (fs.existsSync(oldPhotoPath)) fs.unlinkSync(oldPhotoPath); } catch(_) {}
+            }
+            const photoFile = req.files.blogPhoto1[0];
+            const destPath = path.join(__dirname, 'public', 'uploads', photoFile.filename);
+            await sharp(photoFile.path)
+                .resize(1200, 800, { fit: 'inside', withoutEnlargement: true })
+                .jpeg({ quality: 85 })
+                .toFile(destPath);
+            await fsPromises.unlink(photoFile.path);
+            updatedPost.photo1 = photoFile.filename;
+        }
+
+        if (req.files && req.files.blogPhoto2 && req.files.blogPhoto2[0]) {
+            // Delete old photo if exists
+            if (posts[postIndex].photo2) {
+                const oldPhotoPath = path.join(__dirname, 'public', 'uploads', posts[postIndex].photo2);
+                try { if (fs.existsSync(oldPhotoPath)) fs.unlinkSync(oldPhotoPath); } catch(_) {}
+            }
+            const photoFile = req.files.blogPhoto2[0];
+            const destPath = path.join(__dirname, 'public', 'uploads', photoFile.filename);
+            await sharp(photoFile.path)
+                .resize(1200, 800, { fit: 'inside', withoutEnlargement: true })
+                .jpeg({ quality: 85 })
+                .toFile(destPath);
+            await fsPromises.unlink(photoFile.path);
+            updatedPost.photo2 = photoFile.filename;
+        }
+
+        posts[postIndex] = updatedPost;
+        saveBlogPosts(posts);
+        res.redirect('/admin/blog?success=Blog-Post erfolgreich aktualisiert');
+    } catch (error) {
+        console.error('Fehler beim Aktualisieren des Blog-Posts:', error);
+        res.status(500).send('Fehler beim Aktualisieren des Blog-Posts');
+    }
+});
+
+app.get('/admin/blog/delete/:id', requireAdmin, (req, res) => {
+    try {
+        const posts = getBlogPosts();
+        const postIndex = posts.findIndex(p => p.id === req.params.id);
+        if (postIndex === -1) {
+            return res.status(404).send('Blog-Post nicht gefunden');
+        }
+
+        // Delete photos
+        if (posts[postIndex].photo1) {
+            const photoPath = path.join(__dirname, 'public', 'uploads', posts[postIndex].photo1);
+            try { if (fs.existsSync(photoPath)) fs.unlinkSync(photoPath); } catch(_) {}
+        }
+        if (posts[postIndex].photo2) {
+            const photoPath = path.join(__dirname, 'public', 'uploads', posts[postIndex].photo2);
+            try { if (fs.existsSync(photoPath)) fs.unlinkSync(photoPath); } catch(_) {}
+        }
+
+        posts.splice(postIndex, 1);
+        saveBlogPosts(posts);
+        res.redirect('/admin/blog?success=Blog-Post erfolgreich gelöscht');
+    } catch (error) {
+        console.error('Fehler beim Löschen des Blog-Posts:', error);
+        res.status(500).send('Fehler beim Löschen des Blog-Posts');
     }
 });
 
