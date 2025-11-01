@@ -49,5 +49,6 @@ ecosystem.config.js
 *.md
 !README.md
 !DEPLOYMENT.md
+!EMAIL_SETUP.md
 cookies.txt
 phpinfo.php

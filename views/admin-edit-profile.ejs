@@ -9,19 +9,19 @@
 <body class="h-full">
     <div class="min-h-full">
         <!-- Header -->
-        <nav class="bg-white shadow-sm">
+        <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="flex h-16 justify-between">
                     <div class="flex items-center space-x-4">
-                        <a href="/admin" class="flex items-center text-indigo-600 font-semibold">
+                        <a href="/admin" class="flex items-center text-blue-600 font-semibold">
                             ← Zurück zum Admin Dashboard
                         </a>
                         <span class="text-gray-400">|</span>
-                        <span class="text-sm text-gray-600">Bearbeite: <%= doctor.firstName %> <%= doctor.lastName %></span>
+                        <span class="text-sm text-gray-700">Bearbeite: <%= doctor.firstName %> <%= doctor.lastName %></span>
                     </div>
                     <div class="flex items-center">
                         <form action="/logout" method="POST">
-                            <button type="submit" class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                            <button type="submit" class="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-800 border border-gray-300 hover:bg-gray-50">
                                 Abmelden
                             </button>
                         </form>
@@ -36,15 +36,15 @@
                     <div class="space-y-12">
                         <!-- Profilbereich -->
                         <div class="border-b border-gray-900/10 pb-12">
-                            <h2 class="text-base font-semibold leading-7 text-gray-900">Profil</h2>
-                            <p class="mt-1 text-sm leading-6 text-gray-600">
+                            <h2 class="text-base font-semibold leading-7 text-gray-800">Profil</h2>
+                            <p class="mt-1 text-sm leading-6 text-gray-700">
                                 Diese Informationen werden öffentlich angezeigt. Überlegen Sie sich gut, was Sie teilen möchten.
                             </p>
 
                             <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
                                 <!-- Profilbild -->
                                 <div class="col-span-full">
-                                    <label for="photo" class="block text-sm font-medium leading-6 text-gray-900">Foto</label>
+                                    <label for="photo" class="block text-sm font-semibold text-gray-800 mb-2 ">Foto</label>
                                     <div class="mt-2 flex items-center gap-x-3">
                                         <% if (doctor.photo) { %>
                                             <img src="/uploads/<%= doctor.photo %>" alt="Profilfoto" class="h-24 w-24 rounded-full object-cover">
@@ -54,25 +54,25 @@
                                             </svg>
                                         <% } %>
                                         <input type="file" name="photo" id="photo" accept="image/*" class="hidden">
-                                        <button type="button" onclick="document.getElementById('photo').click()" class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                        <button type="button" onclick="document.getElementById('photo').click()" class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-gray-800 border border-gray-300 hover:bg-gray-50">
                                             Ändern
                                         </button>
                                         <% if (doctor.photo) { %>
-                                        <button type="button" onclick="if(confirm('Profilfoto wirklich löschen?')) document.getElementById('deletePhotoForm').submit();" class="rounded-md bg-red-50 px-2.5 py-1.5 text-sm font-semibold text-red-700 ring-1 ring-inset ring-red-300 hover:bg-red-100">
+                                        <button type="button" onclick="if(confirm('Profilfoto wirklich löschen?')) document.getElementById('deletePhotoForm').submit();" class="rounded-lg bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 border border-red-200 hover:bg-red-100">
                                             Löschen
                                         </button>
                                         <% } %>
                                     </div>
-                                    <p class="mt-3 text-sm leading-6 text-gray-600">Erlaubte Formate: JPG, JPEG, PNG. Maximale Größe: 4MB. Empfohlene Auflösung: 1200x1200 Pixel.</p>
+                                    <p class="mt-3 text-sm leading-6 text-gray-700">Erlaubte Formate: JPG, JPEG, PNG. Maximale Größe: 4MB. Empfohlene Auflösung: 1200x1200 Pixel.</p>
                                 </div>
 
                                 <!-- Über mich -->
                                 <div class="col-span-full">
-                                    <label for="additionalInfo" class="block text-sm font-medium leading-6 text-gray-900">Über mich</label>
+                                    <label for="additionalInfo" class="block text-sm font-semibold text-gray-800 mb-2 ">Über mich</label>
                                     <div class="mt-2">
-                                        <textarea id="additionalInfo" name="additionalInfo" rows="6" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"><%= doctor.additionalInfo || '' %></textarea>
+                                        <textarea id="additionalInfo" name="additionalInfo" rows="6" class="block w-full border border-gray-300 rounded-lg p-3 border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6"><%= doctor.additionalInfo || '' %></textarea>
                                     </div>
-                                    <p class="mt-3 text-sm leading-6 text-gray-600">Ein paar Sätze über Sie und Ihre Praxis.</p>
+                                    <p class="mt-3 text-sm leading-6 text-gray-700">Ein paar Sätze über Sie und Ihre Praxis.</p>
                                 </div>
 
                             </div>
@@ -80,45 +80,37 @@
 
                         <!-- Persönliche Informationen -->
                         <div class="border-b border-gray-900/10 pb-12">
-                            <h2 class="text-base font-semibold leading-7 text-gray-900">Persönliche Informationen</h2>
+                            <h2 class="text-base font-semibold leading-7 text-gray-800">Persönliche Informationen</h2>
                          
+                            <!-- Hidden title field for backend compatibility -->
+                            <input type="hidden" id="title" name="title" value="<%= doctor.title || 'Herr' %>">
+                            
                             <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-                                <div class="sm:col-span-2">
-                                    <label for="title" class="block text-sm font-medium leading-6 text-gray-900">Anrede</label>
+                                <div class="sm:col-span-3">
+                                    <label for="academicTitle" class="block text-sm font-semibold text-gray-800 mb-2 ">Akademischer Titel</label>
                                     <div class="mt-2">
-                                        <select id="title" name="title" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
-                                            <option value="">Bitte wählen</option>
-                                            <option value="Herr" <%= doctor.title === 'Herr' ? 'selected' : '' %>>Herr</option>
-                                            <option value="Frau" <%= doctor.title === 'Frau' ? 'selected' : '' %>>Frau</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="sm:col-span-2">
-                                    <label for="academicTitle" class="block text-sm font-medium leading-6 text-gray-900">Akademischer Titel</label>
-                                    <div class="mt-2">
-                                        <input type="text" id="academicTitle" name="academicTitle" value="<%= doctor.academicTitle || '' %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="text" id="academicTitle" name="academicTitle" value="<%= doctor.academicTitle || '' %>" class="block w-full rounded-lg border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
                                 <div class="sm:col-span-3">
-                                    <label for="firstName" class="block text-sm font-medium leading-6 text-gray-900">Vorname</label>
+                                    <label for="firstName" class="block text-sm font-semibold text-gray-800 mb-2 ">Vorname</label>
                                     <div class="mt-2">
-                                        <input type="text" id="firstName" name="firstName" value="<%= doctor.firstName %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="text" id="firstName" name="firstName" value="<%= doctor.firstName %>" class="block w-full rounded-lg border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
                                 <div class="sm:col-span-3">
-                                    <label for="lastName" class="block text-sm font-medium leading-6 text-gray-900">Nachname</label>
+                                    <label for="lastName" class="block text-sm font-semibold text-gray-800 mb-2 ">Nachname</label>
                                     <div class="mt-2">
-                                        <input type="text" id="lastName" name="lastName" value="<%= doctor.lastName %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="text" id="lastName" name="lastName" value="<%= doctor.lastName %>" class="block w-full rounded-lg border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
                                 <div class="col-span-full">
-                                    <label for="mainSpecialty" class="block text-sm font-medium leading-6 text-gray-900">Fachgebiet</label>
+                                    <label for="mainSpecialty" class="block text-sm font-semibold text-gray-800 mb-2 ">Fachgebiet</label>
                                     <div class="mt-2">
-                                        <select name="mainSpecialty" id="mainSpecialty" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <select name="mainSpecialty" id="mainSpecialty" class="block w-full rounded-lg border border-gray-300 rounded-lg p-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6">
                                             <option value="">Bitte wählen</option>
                                             <% 
                                                 const specialtyType = doctor.title === 'Frau' ? 'female' : 'male';
@@ -131,72 +123,71 @@
                                             <% }); %>
                                         </select>
                                     </div>
-                                    <p class="mt-1 text-sm text-gray-500">Die Liste ändert sich basierend auf der Anrede (Herr/Frau)</p>
                                 </div>
 
                                 <div class="col-span-full">
-                                    <label for="address" class="block text-sm font-medium leading-6 text-gray-900">Adresse</label>
+                                    <label for="address" class="block text-sm font-semibold text-gray-800 mb-2 ">Adresse</label>
                                     <div class="mt-2">
-                                        <input type="text" id="address" name="address" value="<%= doctor.address || '' %>" placeholder="Beginnen Sie mit der Eingabe Ihrer Adresse..." class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="text" id="address" name="address" value="<%= doctor.address || '' %>" placeholder="Beginnen Sie mit der Eingabe Ihrer Adresse..." class="block w-full rounded-lg border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6">
                                     </div>
                                     <p class="mt-1 text-sm text-gray-500">Wählen Sie eine Adresse aus den Vorschlägen für eine genaue Validierung</p>
                                 </div>
 
                                 <div class="col-span-full hidden">
-                                    <label for="street" class="block text-sm font-medium leading-6 text-gray-900">Straße und Hausnummer</label>
+                                    <label for="street" class="block text-sm font-semibold text-gray-800 mb-2 ">Straße und Hausnummer</label>
                                     <div class="mt-2">
-                                        <input type="text" id="street" name="street" value="<%= doctor.street || '' %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="text" id="street" name="street" value="<%= doctor.street || '' %>" class="block w-full rounded-lg border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
                                 <div class="col-span-full">
-                                    <label for="addressLine2" class="block text-sm font-medium leading-6 text-gray-900">Adresszusatz (optional)</label>
+                                    <label for="addressLine2" class="block text-sm font-semibold text-gray-800 mb-2 ">Adresszusatz (optional)</label>
                                     <div class="mt-2">
-                                        <input type="text" id="addressLine2" name="addressLine2" value="<%= doctor.addressLine2 || '' %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="z.B. Stiege, Tür, Stockwerk, Gebäude">
+                                        <input type="text" id="addressLine2" name="addressLine2" value="<%= doctor.addressLine2 || '' %>" class="block w-full rounded-lg border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6" placeholder="z.B. Stiege, Tür, Stockwerk, Gebäude">
                                     </div>
                                     <p class="mt-1 text-sm text-gray-500">Zusätzliche Informationen zu Ihrer Adresse</p>
                                 </div>
 
                                 <div class="sm:col-span-2 sm:col-start-1 hidden">
-                                    <label for="zipCode" class="block text-sm font-medium leading-6 text-gray-900">PLZ</label>
+                                    <label for="zipCode" class="block text-sm font-semibold text-gray-800 mb-2 ">PLZ</label>
                                     <div class="mt-2">
-                                        <input type="text" id="zipCode" name="zipCode" value="<%= doctor.zipCode || '' %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="text" id="zipCode" name="zipCode" value="<%= doctor.zipCode || '' %>" class="block w-full rounded-lg border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
                                 <div class="sm:col-span-4 hidden">
-                                    <label for="city" class="block text-sm font-medium leading-6 text-gray-900">Stadt</label>
+                                    <label for="city" class="block text-sm font-semibold text-gray-800 mb-2 ">Stadt</label>
                                     <div class="mt-2">
-                                        <input type="text" id="city" name="city" value="<%= doctor.city || '' %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="text" id="city" name="city" value="<%= doctor.city || '' %>" class="block w-full rounded-lg border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
                                 <div class="sm:col-span-4">
-                                    <label for="email" class="block text-sm font-medium leading-6 text-gray-900">E-Mail</label>
+                                    <label for="email" class="block text-sm font-semibold text-gray-800 mb-2 ">E-Mail</label>
                                     <div class="mt-2">
-                                        <input type="email" id="email" name="email" value="<%= doctor.email %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="email" id="email" name="email" value="<%= doctor.email %>" class="block w-full rounded-lg border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
                                 <div class="sm:col-span-4">
-                                    <label for="phone" class="block text-sm font-medium leading-6 text-gray-900">Telefon</label>
+                                    <label for="phone" class="block text-sm font-semibold text-gray-800 mb-2 ">Telefon</label>
                                     <div class="mt-2">
-                                        <input type="tel" id="phone" name="phone" value="<%= doctor.phone || '' %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="tel" id="phone" name="phone" value="<%= doctor.phone || '' %>" class="block w-full rounded-lg border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
                                 <div class="sm:col-span-4">
-                                    <label for="website" class="block text-sm font-medium leading-6 text-gray-900">Website</label>
+                                    <label for="website" class="block text-sm font-semibold text-gray-800 mb-2 ">Website</label>
                                     <div class="mt-2">
-                                        <input type="url" id="website" name="website" value="<%= doctor.website || '' %>" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                        <input type="url" id="website" name="website" value="<%= doctor.website || '' %>" class="block w-full rounded-lg border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6">
                                     </div>
                                 </div>
 
                                 <!-- Passwort ändern -->
                                 <div class="col-span-full">
-                                    <label for="password" class="block text-sm font-medium leading-6 text-gray-900">Neues Passwort (optional)</label>
+                                    <label for="password" class="block text-sm font-semibold text-gray-800 mb-2 ">Neues Passwort (optional)</label>
                                     <div class="mt-2 max-w-xs">
-                                        <input type="password" id="password" name="password" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Leer lassen, um das Passwort nicht zu ändern">
+                                        <input type="password" id="password" name="password" class="block w-full rounded-lg border border-gray-300 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm sm:leading-6" placeholder="Leer lassen, um das Passwort nicht zu ändern">
                                     </div>
                                     <p class="mt-1 text-sm text-gray-500">Lassen Sie dieses Feld leer, um das aktuelle Passwort beizubehalten</p>
                                 </div>
@@ -205,8 +196,8 @@
 
                         <!-- Kassenverträge -->
                         <div class="border-b border-gray-900/10 pb-12">
-                            <h2 class="text-base font-semibold leading-7 text-gray-900">Kassenverträge</h2>
-                            <p class="mt-1 text-sm leading-6 text-gray-600">Wählen Sie Ihre Vertragspartner aus.</p>
+                            <h2 class="text-base font-semibold leading-7 text-gray-800">Kassenverträge</h2>
+                            <p class="mt-1 text-sm leading-6 text-gray-700">Wählen Sie Ihre Vertragspartner aus.</p>
 
                             <div class="mt-10 space-y-10">
                                 <fieldset>
@@ -214,8 +205,8 @@
                                         <div class="flex items-center gap-x-3">
                                             <input type="radio" id="noContract" name="insuranceType" value="noContract"
                                                 <%= doctor.insurance && doctor.insurance.noContract ? 'checked' : '' %>
-                                                class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600">
-                                            <label for="noContract" class="block text-sm font-medium leading-6 text-gray-900">
+                                                class="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500">
+                                            <label for="noContract" class="block text-sm font-semibold text-gray-800 mb-2 ">
                                                 Keine - Nur Wahlarzt
                                             </label>
                                         </div>
@@ -223,8 +214,8 @@
                                         <div class="flex items-center gap-x-3">
                                             <input type="radio" id="hasContract" name="insuranceType" value="hasContract"
                                                 <%= doctor.insurance && !doctor.insurance.noContract ? 'checked' : '' %>
-                                                class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600">
-                                            <label for="hasContract" class="block text-sm font-medium leading-6 text-gray-900">
+                                                class="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500">
+                                            <label for="hasContract" class="block text-sm font-semibold text-gray-800 mb-2 ">
                                                 Kassenverträge mit:
                                             </label>
                                         </div>
@@ -240,10 +231,10 @@
                                                 <div class="flex h-6 items-center">
                                                     <input type="checkbox" id="oegk" data-insurance="oegk"
                                                         <%= doctor.insurance && doctor.insurance.oegk ? 'checked' : '' %>
-                                                        class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                                                        class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                                 </div>
                                                 <div class="text-sm leading-6">
-                                                    <label for="oegk" class="font-medium text-gray-900">ÖGK</label>
+                                                    <label for="oegk" class="font-semibold text-gray-800">ÖGK</label>
                                                 </div>
                                             </div>
 
@@ -251,10 +242,10 @@
                                                 <div class="flex h-6 items-center">
                                                     <input type="checkbox" id="svs" data-insurance="svs"
                                                         <%= doctor.insurance && doctor.insurance.svs ? 'checked' : '' %>
-                                                        class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                                                        class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                                 </div>
                                                 <div class="text-sm leading-6">
-                                                    <label for="svs" class="font-medium text-gray-900">SVS</label>
+                                                    <label for="svs" class="font-semibold text-gray-800">SVS</label>
                                                 </div>
                                             </div>
 
@@ -262,10 +253,10 @@
                                                 <div class="flex h-6 items-center">
                                                     <input type="checkbox" id="bvaeb" data-insurance="bvaeb"
                                                         <%= doctor.insurance && doctor.insurance.bvaeb ? 'checked' : '' %>
-                                                        class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                                                        class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                                 </div>
                                                 <div class="text-sm leading-6">
-                                                    <label for="bvaeb" class="font-medium text-gray-900">BVAEB</label>
+                                                    <label for="bvaeb" class="font-semibold text-gray-800">BVAEB</label>
                                                 </div>
                                             </div>
 
@@ -273,10 +264,10 @@
                                                 <div class="flex h-6 items-center">
                                                     <input type="checkbox" id="kfa" data-insurance="kfa"
                                                         <%= doctor.insurance && doctor.insurance.kfa ? 'checked' : '' %>
-                                                        class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                                                        class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                                 </div>
                                                 <div class="text-sm leading-6">
-                                                    <label for="kfa" class="font-medium text-gray-900">KFA</label>
+                                                    <label for="kfa" class="font-semibold text-gray-800">KFA</label>
                                                 </div>
                                             </div>
                                         </div>
@@ -288,8 +279,8 @@
 
                     <div class="mt-6 flex flex-col items-end gap-x-6 gap-y-3">
                         <div class="flex items-center gap-x-6">
-                            <a href="/admin" class="text-sm font-semibold leading-6 text-gray-900">Abbrechen</a>
-                            <button type="submit" class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                            <a href="/admin" class="text-sm font-semibold ">Abbrechen</a>
+                            <button type="submit" class="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 ">
                                 Speichern
                             </button>
                         </div>
@@ -300,8 +291,8 @@
                 
                 <!-- Bildergalerie -->
                 <div class="mt-12 border-t border-gray-900/10 pt-10">
-                    <h2 class="text-base font-semibold leading-7 text-gray-900">Bildergalerie</h2>
-                    <p class="mt-1 text-sm leading-6 text-gray-600">
+                    <h2 class="text-base font-semibold leading-7 text-gray-800">Bildergalerie</h2>
+                    <p class="mt-1 text-sm leading-6 text-gray-700">
                         Ordinationsfotos
                     </p>
                     
@@ -312,7 +303,7 @@
                                 <div class="relative group">
                                     <img src="/uploads/<%= photo %>" 
                                          alt="Ordinationsfoto" 
-                                         class="w-full h-auto rounded-lg shadow-md"
+                                         class="w-full h-auto rounded-2xl shadow-md"
                                          style="aspect-ratio: 4/3; object-fit: cover;">
                                     <form action="/admin/gallery/delete/<%= doctor.email %>" method="POST" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <input type="hidden" name="photoName" value="<%= photo %>">
@@ -329,18 +320,18 @@
                             <p class="text-sm text-gray-500">Noch keine Fotos hinzugefügt.</p>
                         <% } %>
                     </div>
-                    <p class="mt-3 text-sm leading-6 text-gray-600">Fotos können über das Hauptformular hinzugefügt werden.</p>
+                    <p class="mt-3 text-sm leading-6 text-gray-700">Fotos können über das Hauptformular hinzugefügt werden.</p>
                 </div>
                 
                 <!-- Google Maps Box hinzufügen -->
                 <div class="mt-12 border-t border-gray-900/10 pt-10">
-                    <h2 class="text-base font-semibold leading-7 text-gray-900">Standort</h2>
-                    <p class="mt-1 text-sm leading-6 text-gray-600">
+                    <h2 class="text-base font-semibold leading-7 text-gray-800">Standort</h2>
+                    <p class="mt-1 text-sm leading-6 text-gray-700">
                         Hier finden Sie den Standort der Praxis. Klicken Sie auf die Karte, um die Route zu planen.
                     </p>
                     
                     <div class="mt-6">
-                        <div id="map" class="w-full h-96 rounded-lg shadow-md"></div>
+                        <div id="map" class="w-full h-96 rounded-2xl shadow-md"></div>
                     </div>
                 </div>
             </div>
@@ -386,73 +377,6 @@
             }
         });
 
-        // Gender detection function (matches server-side function)
-        function detectGenderFromName(firstName) {
-            if (!firstName) return null;
-            
-            const name = firstName.toLowerCase().trim();
-            
-            // Turkish female names
-            const turkishFemaleNames = [
-                'ayşe', 'fatma', 'emine', 'hatice', 'zeynep', 'elif', 'meryem', 'zehra', 'sibel', 'özlem',
-                'aygül', 'aynur', 'ayşegül', 'gül', 'gülay', 'gülsüm', 'hülya', 'melek', 'nur', 'nurcan',
-                'pınar', 'pinar', 'serpil', 'sultan', 'şule', 'tuğba', 'yasemin', 'yeliz', 'zeliha', 'deniz', 'eda',
-                'emel', 'esra', 'feride', 'gamze', 'hande', 'ilknur', 'jale', 'kübra', 'leyla', 'meltem',
-                'necla', 'özge', 'pelin', 'selin', 'tuba', 'ümmü', 'vildan', 'yıldız', 'zuhal', 'aslı',
-                'berna', 'cemre', 'dilek', 'ecem', 'figen', 'gizem', 'hacer', 'ipek', 'jülide', 'kadriye',
-                'lale', 'müge', 'nihan', 'özlem', 'pembe', 'seda', 'tülay', 'ünal', 'vildan', 'yaprak',
-                'canan', 'derya', 'sema', 'sabiha', 'sevgi', 'medine', 'melisa', 'neslihan'
-            ];
-            
-            // Turkish male names
-            const turkishMaleNames = [
-                'mehmet', 'mustafa', 'ahmet', 'ali', 'hüseyin', 'hasan', 'ibrahim', 'ismail', 'ömer', 'osman',
-                'batuhan', 'berk', 'can', 'cem', 'deniz', 'emre', 'erhan', 'furkan', 'gökhan', 'halil',
-                'ibrahim', 'kadir', 'kerem', 'murat', 'onur', 'özkan', 'serkan', 'taner', 'umut', 'yasin',
-                'yusuf', 'zafer', 'abdullah', 'adnan', 'burak', 'cihan', 'doğan', 'emir', 'ferhat', 'gürkan',
-                'hakan', 'ilker', 'jale', 'kamil', 'levent', 'mert', 'nihat', 'orhan', 'pınar', 'ramazan',
-                'selim', 'tayfun', 'ufuk', 'volkan', 'yavuz', 'zeki', 'arif', 'bülent', 'cengiz', 'dursun',
-                'engin', 'fahri', 'güven', 'hüseyin', 'ismet', 'jülide', 'kürşat', 'leyla', 'mücahit', 'nuri'
-            ];
-            
-            // German female names
-            const germanFemaleNames = [
-                'anna', 'maria', 'petra', 'monika', 'elke', 'sabine', 'andrea', 'barbara', 'christina', 'daniela',
-                'elena', 'franziska', 'gabriele', 'heike', 'ingrid', 'julia', 'katharina', 'lisa', 'martina', 'nicole',
-                'petra', 'regina', 'sandra', 'tina', 'ulrike', 'veronika', 'waltraud', 'yvonne', 'zoe', 'alexandra',
-                'britta', 'caroline', 'diana', 'eva', 'friederike', 'gudrun', 'helga', 'iris', 'johanna', 'kristin',
-                'lena', 'margarete', 'nina', 'olga', 'patricia', 'renate', 'sylvia', 'theresa', 'ursula', 'viktoria'
-            ];
-            
-            // German male names
-            const germanMaleNames = [
-                'hans', 'peter', 'wolfgang', 'klaus', 'jürgen', 'dieter', 'horst', 'gerhard', 'helmut', 'werner',
-                'alexander', 'bernd', 'christian', 'dirk', 'erik', 'florian', 'günther', 'heinz', 'ingo', 'jens',
-                'karl', 'lars', 'michael', 'norbert', 'oliver', 'ralf', 'stefan', 'thomas', 'uwe', 'volker',
-                'andreas', 'benedikt', 'carl', 'dennis', 'erwin', 'frank', 'georg', 'herbert', 'ingo', 'jörg',
-                'kurt', 'ludwig', 'manfred', 'nicolas', 'otto', 'paul', 'rainer', 'sebastian', 'torsten', 'ulrich'
-            ];
-            
-            // Check Turkish names first (more common in this context)
-            if (turkishFemaleNames.includes(name)) return 'Frau';
-            if (turkishMaleNames.includes(name)) return 'Herr';
-            
-            // Check German names
-            if (germanFemaleNames.includes(name)) return 'Frau';
-            if (germanMaleNames.includes(name)) return 'Herr';
-            
-            // Check for common Turkish name endings
-            if (name.endsWith('e') || name.endsWith('a') || name.endsWith('i') || name.endsWith('ü') || name.endsWith('ö')) {
-                return 'Frau';
-            }
-            
-            // Check for common Turkish male name endings
-            if (name.endsWith('t') || name.endsWith('n') || name.endsWith('r') || name.endsWith('k') || name.endsWith('m')) {
-                return 'Herr';
-            }
-            
-            return null; // Uncertain
-        }
 
         // Update specialty dropdown based on title
         function updateSpecialtyDropdown(selectedTitle) {
@@ -478,49 +402,12 @@
             });
         }
 
-        // Auto-detect title when first name changes
-        const firstNameInput = document.getElementById('firstName');
-        const titleSelect = document.getElementById('title');
+        // Initialize specialty dropdown based on existing title
+        const titleHidden = document.getElementById('title');
         const specialtySelect = document.getElementById('mainSpecialty');
         
-        if (firstNameInput && titleSelect && specialtySelect) {
-            firstNameInput.addEventListener('input', function() {
-                const firstName = this.value.trim();
-                if (firstName) {
-                    const detectedGender = detectGenderFromName(firstName);
-                    if (detectedGender) {
-                        titleSelect.value = detectedGender;
-                        updateSpecialtyDropdown(detectedGender);
-                        
-                        // Show a subtle notification
-                        const notification = document.createElement('div');
-                        notification.className = 'text-sm text-blue-600 mt-1';
-                        notification.textContent = `✓ Anrede automatisch auf "${detectedGender}" gesetzt`;
-                        
-                        // Remove any existing notification
-                        const existingNotification = titleSelect.parentNode.querySelector('.text-blue-600');
-                        if (existingNotification) {
-                            existingNotification.remove();
-                        }
-                        
-                        titleSelect.parentNode.appendChild(notification);
-                        
-                        // Remove notification after 3 seconds
-                        setTimeout(() => {
-                            if (notification.parentNode) {
-                                notification.remove();
-                            }
-                        }, 3000);
-                    }
-                }
-            });
-        }
-
-        // Specialty Dropdown aktualisieren wenn Anrede geändert wird
-        if (titleSelect && specialtySelect) {
-            titleSelect.addEventListener('change', function() {
-                updateSpecialtyDropdown(this.value);
-            });
+        if (titleHidden && specialtySelect) {
+            updateSpecialtyDropdown(titleHidden.value || 'Herr');
         }
 
         // Initialer Zustand für Versicherungsoptionen
@@ -626,8 +513,8 @@
 
                 const autocompleteOptions = {
                     componentRestrictions: { country: ['at'] },
-                    fields: ['address_component', 'geometry'],
-                    types: ['address']
+                    fields: ['address_component', 'geometry', 'name', 'formatted_address']
+                    // No types restriction - allows both addresses and businesses (establishments)
                 };
 
                 const autocomplete = new google.maps.places.Autocomplete(addressInput, autocompleteOptions);
@@ -656,28 +543,38 @@
 
                         addressInput.classList.remove('border-red-500');
 
+                        // Update address field with formatted address or place name
+                        if (place.formatted_address) {
+                            addressInput.value = place.formatted_address;
+                        } else if (place.name) {
+                            addressInput.value = place.name;
+                        }
+
                         let streetFromPlace = '';
                         let streetNumber = '';
                         let zipCode = '';
                         let city = '';
 
                         for (const component of place.address_components || []) {
-                            const componentType = component.types[0];
-
-                            switch (componentType) {
-                                case 'route':
-                                    streetFromPlace = component.long_name;
-                                    break;
-                                case 'street_number':
-                                    streetNumber = component.long_name;
-                                    break;
-                                case 'postal_code':
-                                    zipCode = component.long_name;
-                                    break;
-                                case 'locality':
-                                    city = component.long_name;
-                                    break;
+                            const types = component.types;
+                            
+                            if (types.includes('route')) {
+                                streetFromPlace = component.long_name;
                             }
+                            if (types.includes('street_number')) {
+                                streetNumber = component.long_name;
+                            }
+                            if (types.includes('postal_code')) {
+                                zipCode = component.long_name;
+                            }
+                            if (types.includes('locality')) {
+                                city = component.long_name;
+                            }
+                        }
+
+                        // For businesses without route, use place name as street
+                        if (!streetFromPlace && place.name) {
+                            streetFromPlace = place.name;
                         }
 
                         const fullStreet = streetFromPlace + (streetNumber ? ' ' + streetNumber : '');

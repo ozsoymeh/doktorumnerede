@@ -1,74 +1,61 @@
 <!DOCTYPE html>
-<html lang="de" class="h-full bg-gray-50">
+<html lang="de" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registrierung - Doktorum nerede</title>
     <link href="/css/output.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-<body class="h-full">
+<body class="h-full bg-gray-50 font-sans antialiased">
     <div class="flex min-h-full flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div class="sm:mx-auto sm:w-full sm:max-w-md">
-            <a href="/" class="text-center text-2xl font-bold leading-9 tracking-tight text-indigo-600">
+            <a href="/" class="text-center text-2xl font-bold leading-9 tracking-tight text-blue-600 hover:text-blue-700 transition-all duration-200 ease-in-out">
                 Doktorum nerede
             </a>
-            <h2 class="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
+            <h2 class="mt-8 text-center text-2xl font-bold leading-9 tracking-tight text-gray-800">
                 Als Arzt registrieren
             </h2>
         </div>
 
         <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-            <div class="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12">
-                <div class="mb-6 text-sm text-gray-600">
+            <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50 rounded-2xl px-8 py-10 sm:px-10 hover:shadow-lg transition-all duration-200 ease-in-out">
+                <div class="mb-6 text-sm text-gray-700">
                     <p>Sehr geehrte Kollegin, sehr geehrter Kollege,</p>
                     <p class="mt-2">nach der Registrierung können Sie auf Ihrer Profilseite weitere Informationen bearbeiten und Ihr Foto hochladen.</p>
                 </div>
 
-                <% if (error) { %>
-                    <div class="mb-6 rounded-md bg-red-50 p-4">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <h3 class="text-sm font-medium text-red-800"><%= error %></h3>
-                            </div>
-                        </div>
-                    </div>
-                <% } %>
 
                 <form class="space-y-6" action="/register" method="POST">
                     <div>
-                        <label for="email" class="block text-sm font-medium leading-6 text-gray-900">E-Mail *</label>
-                        <div class="mt-2">
+                        <label for="email" class="block text-sm font-semibold text-gray-800 mb-2">E-Mail *</label>
+                        <div>
                             <input type="email" id="email" name="email" required
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                         </div>
                     </div>
 
                     <div>
-                        <label for="password" class="block text-sm font-medium leading-6 text-gray-900">Passwort *</label>
-                        <div class="mt-2">
+                        <label for="password" class="block text-sm font-semibold text-gray-800 mb-2">Passwort *</label>
+                        <div>
                             <input type="password" id="password" name="password" required
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                         </div>
                     </div>
 
                     <div>
-                        <label for="confirmPassword" class="block text-sm font-medium leading-6 text-gray-900">Passwort wiederholen *</label>
-                        <div class="mt-2">
+                        <label for="confirmPassword" class="block text-sm font-semibold text-gray-800 mb-2">Passwort wiederholen *</label>
+                        <div>
                             <input type="password" id="confirmPassword" name="confirmPassword" required
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                         </div>
                     </div>
 
                     <div>
-                        <label for="title" class="block text-sm font-medium leading-6 text-gray-900">Anrede *</label>
-                        <div class="mt-2">
+                        <label for="title" class="block text-sm font-semibold text-gray-800 mb-2">Anrede *</label>
+                        <div>
                             <select id="title" name="title" required
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                                 <option value="">Bitte wählen</option>
                                 <option value="Herr">Herr</option>
                                 <option value="Frau">Frau</option>
@@ -77,94 +64,94 @@
                     </div>
 
                     <div>
-                        <label for="academicTitle" class="block text-sm font-medium leading-6 text-gray-900">Akademischer Titel *</label>
-                        <div class="mt-2">
+                        <label for="academicTitle" class="block text-sm font-semibold text-gray-800 mb-2">Akademischer Titel *</label>
+                        <div>
                             <input type="text" id="academicTitle" name="academicTitle" required
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                         </div>
                     </div>
 
                     <div>
-                        <label for="firstName" class="block text-sm font-medium leading-6 text-gray-900">Vorname *</label>
-                        <div class="mt-2">
+                        <label for="firstName" class="block text-sm font-semibold text-gray-800 mb-2">Vorname *</label>
+                        <div>
                             <input type="text" id="firstName" name="firstName" required
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                         </div>
                     </div>
 
                     <div>
-                        <label for="lastName" class="block text-sm font-medium leading-6 text-gray-900">Nachname *</label>
-                        <div class="mt-2">
+                        <label for="lastName" class="block text-sm font-semibold text-gray-800 mb-2">Nachname *</label>
+                        <div>
                             <input type="text" id="lastName" name="lastName" required
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                         </div>
                     </div>
 
                     <div>
-                        <label for="mainSpecialty" class="block text-sm font-medium leading-6 text-gray-900">Fachgebiet *</label>
-                        <div class="mt-2">
+                        <label for="mainSpecialty" class="block text-sm font-semibold text-gray-800 mb-2">Fachgebiet *</label>
+                        <div>
                             <select id="mainSpecialty" name="mainSpecialty" required
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                                 <option value="">Bitte wählen</option>
                             </select>
                         </div>
                     </div>
 
                     <div>
-                        <label for="address" class="block text-sm font-medium leading-6 text-gray-900">Adresse</label>
-                        <div class="mt-2">
+                        <label for="address" class="block text-sm font-semibold text-gray-800 mb-2">Adresse</label>
+                        <div>
                             <input type="text" id="address" name="address" placeholder="Beginnen Sie mit der Eingabe Ihrer Adresse..."
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                         </div>
-                        <p class="mt-1 text-sm text-gray-500">Wählen Sie eine Adresse aus den Vorschlägen für eine genaue Validierung</p>
+                        <p class="mt-2 text-sm text-gray-500">Wählen Sie eine Adresse aus den Vorschlägen für eine genaue Validierung</p>
                     </div>
 
                     <div class="hidden">
-                        <label for="street" class="block text-sm font-medium leading-6 text-gray-900">Straße und Hausnummer</label>
-                        <div class="mt-2">
+                        <label for="street" class="block text-sm font-semibold text-gray-800 mb-2">Straße und Hausnummer</label>
+                        <div>
                             <input type="text" id="street" name="street"
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                         </div>
                     </div>
 
                     <div>
-                        <label for="addressLine2" class="block text-sm font-medium leading-6 text-gray-900">Adresszusatz (optional)</label>
-                        <div class="mt-2">
+                        <label for="addressLine2" class="block text-sm font-semibold text-gray-800 mb-2">Adresszusatz (optional)</label>
+                        <div>
                             <input type="text" id="addressLine2" name="addressLine2" 
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm"
                                 placeholder="z.B. Stiege, Tür, Stockwerk, Gebäude">
                         </div>
-                        <p class="mt-1 text-sm text-gray-500">Zusätzliche Informationen zur Adresse, die nicht von Google Maps erfasst werden</p>
+                        <p class="mt-2 text-sm text-gray-500">Zusätzliche Informationen zur Adresse, die nicht von Google Maps erfasst werden</p>
                     </div>
 
                     <div class="hidden">
-                        <label for="zipCode" class="block text-sm font-medium leading-6 text-gray-900">PLZ</label>
-                        <div class="mt-2">
+                        <label for="zipCode" class="block text-sm font-semibold text-gray-800 mb-2">PLZ</label>
+                        <div>
                             <input type="text" id="zipCode" name="zipCode" 
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                         </div>
                     </div>
 
                     <div class="hidden">
-                        <label for="city" class="block text-sm font-medium leading-6 text-gray-900">Stadt</label>
-                        <div class="mt-2">
+                        <label for="city" class="block text-sm font-semibold text-gray-800 mb-2">Stadt</label>
+                        <div>
                             <input type="text" id="city" name="city" 
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                         </div>
                     </div>
 
                     <div>
-                        <label for="phone" class="block text-sm font-medium leading-6 text-gray-900">Telefon *</label>
-                        <div class="mt-2">
+                        <label for="phone" class="block text-sm font-semibold text-gray-800 mb-2">Telefon *</label>
+                        <div>
                             <input type="tel" id="phone" name="phone" required
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                         </div>
                     </div>
 
                     <div class="flex items-center">
                         <input type="checkbox" id="showEmail" name="showEmail" value="true"
-                            class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
-                        <label for="showEmail" class="ml-3 block text-sm leading-6 text-gray-900">
+                            class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <label for="showEmail" class="ml-3 block text-sm leading-6 text-gray-700">
                             E-Mail-Adresse öffentlich anzeigen
                         </label>
                     </div>
@@ -175,14 +162,14 @@
 
                     <div>
                         <button type="submit" 
-                            class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                            class="flex w-full justify-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 ease-in-out">
                             Registrieren
                         </button>
                     </div>
 
-                    <p class="text-center text-sm text-gray-500">
+                    <p class="text-center text-sm text-gray-700">
                         Bereits registriert? 
-                        <a href="/login" class="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">
+                        <a href="/login" class="font-semibold leading-6 text-blue-600 hover:text-blue-700 transition-all duration-200 ease-in-out">
                             Hier anmelden
                         </a>
                     </p>
@@ -229,9 +216,9 @@
                 // Initialisiere den Autocomplete-Service mit verbesserter Konfiguration
                 const autocompleteOptions = {
                     componentRestrictions: { country: ['at'] }, // Einschränkung auf Österreich
-                    fields: ['address_component', 'geometry', 'name'],
-                    types: ['address'],
-                    minLength: 3 // Minimum 3 Zeichen
+                    fields: ['address_component', 'geometry', 'name', 'formatted_address']
+                    // No types restriction - allows both addresses and businesses (establishments)
+                    // minLength removed - using default for better business search
                 };
                 
                 const autocomplete = new google.maps.places.Autocomplete(
@@ -252,6 +239,13 @@
                         
                         document.getElementById('address').classList.remove('border-red-500');
                         
+                        // Update address field with formatted address or place name
+                        if (place.formatted_address) {
+                            document.getElementById('address').value = place.formatted_address;
+                        } else if (place.name) {
+                            document.getElementById('address').value = place.name;
+                        }
+                        
                         // Extrahiere Adresskomponenten
                         let street = '';
                         let streetNumber = '';
@@ -259,22 +253,25 @@
                         let city = '';
                         
                         for (const component of place.address_components || []) {
-                            const componentType = component.types[0];
-
-                            switch (componentType) {
-                                case 'route':
-                                    street = component.long_name;
-                                    break;
-                                case 'street_number':
-                                    streetNumber = component.long_name;
-                                    break;
-                                case 'postal_code':
-                                    zipCode = component.long_name;
-                                    break;
-                                case 'locality':
-                                    city = component.long_name;
-                                    break;
+                            const types = component.types;
+                            
+                            if (types.includes('route')) {
+                                street = component.long_name;
                             }
+                            if (types.includes('street_number')) {
+                                streetNumber = component.long_name;
+                            }
+                            if (types.includes('postal_code')) {
+                                zipCode = component.long_name;
+                            }
+                            if (types.includes('locality')) {
+                                city = component.long_name;
+                            }
+                        }
+                        
+                        // For businesses without route, use place name as street
+                        if (!street && place.name) {
+                            street = place.name;
                         }
                         
                         // Befülle die verborgenen Felder
@@ -283,9 +280,10 @@
                         document.getElementById('city').value = city;
                         
                         // Validiere, ob alle erforderlichen Informationen vorhanden sind
-                        if (!street || !zipCode || !city) {
+                        // More lenient for businesses - they might not have route but have formatted_address
+                        if ((!street && !place.name) || !zipCode || !city) {
                             console.warn('Unvollständige Adressdaten:', place);
-                            alert('Bitte wählen Sie eine vollständige Adresse mit Straße, PLZ und Stadt');
+                            // Still allow form submission - user can manually edit if needed
                         }
                     } catch (error) {
                         console.error('Fehler bei der Verarbeitung der Adresse:', error);
@@ -368,8 +366,13 @@
         const maxRetries = 2;
         
         function loadGoogleMapsAPI() {
+            const apiKey = "<%= googleMapsApiKey %>";
+            if (!apiKey || apiKey === '') {
+                console.warn('Google Maps API key not set on register page, skipping load');
+                return;
+            }
             const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBdLX-Lh95i1L-2-ed-FLzQC0_m8pE&libraries=places&callback=initAutocomplete&v=weekly`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initAutocomplete&v=weekly`;
             script.async = true;
             script.defer = true;
             
@@ -389,6 +392,16 @@
         }
         
         loadGoogleMapsAPI();
+
+        // Show SweetAlert2 error if there's an error message
+        <% if (error) { %>
+            Swal.fire({
+                icon: 'error',
+                title: 'Fehler',
+                text: '<%= error %>',
+                confirmButtonColor: '#ef4444'
+            });
+        <% } %>
     </script>
 </body>
-</html> 
+</html>

@@ -20,7 +20,8 @@
         "all": "Alle",
         "button": "Suchen",
         "noResults": "Keine Ärzte gefunden",
-        "toProfile": "Zum Profil"
+        "toProfile": "Zum Profil",
+        "moreResults": "weitere Ärzte gefunden. Bitte verfeinern Sie Ihre Suche."
     },
     "doctor": {
         "profile": "Arztprofil",
@@ -113,6 +114,7 @@
         "title": "Anrede",
         "name": "Name",
         "specialty": "Fachgebiet",
-        "details": "Details"
+        "details": "Details",
+        "notSpecified": "Nicht angegeben"
     }
 } 

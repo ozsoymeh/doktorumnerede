@@ -10,6 +10,8 @@ const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
 const sharp = require('sharp');
 const fsPromises = require('fs').promises;
+const { normalizeSpecialty } = require('./middleware/specialty-normalizer');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -19,6 +21,53 @@ const translations = {
     de: require('./locales/de.json'),
     tr: require('./locales/tr.json')
 };
+
+// SMTP Email Configuration
+let emailTransporter = null;
+if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    emailTransporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465', // true for 465, false for other ports
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+        }
+    });
+    
+    // Test SMTP connection
+    emailTransporter.verify().then(() => {
+        console.log('SMTP Email-Server erfolgreich konfiguriert');
+    }).catch((error) => {
+        console.error('SMTP Email-Server Konfigurationsfehler:', error);
+        emailTransporter = null;
+    });
+} else {
+    console.log('SMTP nicht konfiguriert - E-Mails werden nicht versendet (nur Console-Log)');
+}
+
+// Helper function to send emails
+async function sendEmail(to, subject, html, text) {
+    if (!emailTransporter) {
+        console.log('Email würde gesendet werden (SMTP nicht konfiguriert):', { to, subject });
+        return false;
+    }
+    
+    try {
+        await emailTransporter.sendMail({
+            from: process.env.EMAIL_FROM || process.env.SMTP_USER,
+            to: to,
+            subject: subject,
+            html: html,
+            text: text || html.replace(/<[^>]*>/g, '') // Strip HTML tags for text version
+        });
+        console.log('Email erfolgreich gesendet an:', to);
+        return true;
+    } catch (error) {
+        console.error('Fehler beim Senden der Email:', error);
+        return false;
+    }
+}
 
 // Verzeichnisse erstellen, falls sie nicht existieren
 const dataDir = path.join(__dirname, 'data');
@@ -263,6 +312,7 @@ app.use((req, res, next) => {
 // View Engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.set('view cache', false); // Disable view caching to see changes immediately
 
 // Auth Middleware
 function requireAuth(req, res, next) {
@@ -371,6 +421,39 @@ function detectGenderFromName(firstName) {
     return null; // Uncertain
 }
 
+/**
+ * Get translated specialty text for a doctor
+ * Normalizes originalSpecialty if needed and returns translated text
+ */
+function getTranslatedSpecialty(doctor, lang = 'de') {
+    if (!doctor) return '';
+    
+    const genderKey = doctor.title === 'Frau' ? 'female' : 'male';
+    const langTranslations = translations[lang] || translations.de;
+    const specialtyDict = langTranslations.specialties?.[genderKey] || {};
+    
+    // Try mainSpecialty or first specialty from specialties array
+    let specialtyKey = doctor.mainSpecialty || (doctor.specialties && doctor.specialties[0]);
+    
+    // If we have a specialty key, try to get translation
+    if (specialtyKey && specialtyDict[specialtyKey]) {
+        return specialtyDict[specialtyKey];
+    }
+    
+    // If no specialty key but we have originalSpecialty, normalize it
+    if (!specialtyKey && doctor.originalSpecialty) {
+        specialtyKey = normalizeSpecialty(doctor.originalSpecialty, genderKey);
+        if (specialtyKey && specialtyDict[specialtyKey]) {
+            return specialtyDict[specialtyKey];
+        }
+        // If normalization failed, return original as fallback
+        return doctor.originalSpecialty;
+    }
+    
+    // Fallback: return empty string (will be handled by templates)
+    return '';
+}
+
 async function processExcelFile() {
     const filePath = path.join(__dirname, 'data', 'doctors.xlsx');
     const workbook = new ExcelJS.Workbook();
@@ -462,9 +545,24 @@ app.get('/', (req, res) => {
     const { name, specialty, city, zipCode } = req.query;
     const doctors = getDoctors().filter(doctor => !doctor.isAdmin && doctor.isApproved);
     
-    // Extrahiere einzigartige PLZ und Städte
-    const cities = [...new Set(doctors.map(doctor => doctor.city).filter(Boolean))].sort();
-    const zipCodes = [...new Set(doctors.map(doctor => doctor.zipCode).filter(Boolean))].sort();
+    // Extrahiere einzigartige PLZ und Städte (normalisiert, um Duplikate zu vermeiden)
+    // Normalisiere Städte: lowercase für Vergleich, dann title case für Anzeige
+    const cityMap = new Map();
+    doctors.forEach(doctor => {
+        if (doctor.city) {
+            const normalized = doctor.city.trim().toLowerCase();
+            // Speichere die erste Variante mit korrekter Groß-/Kleinschreibung
+            if (!cityMap.has(normalized)) {
+                // Erster Buchstabe groß, Rest klein (für einfache Städtenamen wie "Wien")
+                const city = doctor.city.trim();
+                cityMap.set(normalized, city.charAt(0).toUpperCase() + city.slice(1).toLowerCase());
+            }
+        }
+    });
+    const cities = Array.from(cityMap.values()).sort();
+    const zipCodes = [...new Set(
+        doctors.map(doctor => doctor.zipCode?.trim()).filter(Boolean)
+    )].sort();
 
     let filteredDoctors = doctors;
     
@@ -489,20 +587,45 @@ app.get('/', (req, res) => {
     }
 
     if (city) {
+        const normalizedCity = city.trim().toLowerCase();
         filteredDoctors = filteredDoctors.filter(doctor => 
-            doctor.city && doctor.city === city
+            doctor.city && doctor.city.trim().toLowerCase() === normalizedCity
         );
     }
 
     const lang = (req.query && req.query.lang) || (req.session && req.session.lang) || 'de';
+    
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const doctorsPerPage = 25;
+    const totalDoctors = filteredDoctors.length;
+    const totalPages = Math.ceil(totalDoctors / doctorsPerPage);
+    const startIndex = (page - 1) * doctorsPerPage;
+    const endIndex = startIndex + doctorsPerPage;
+    const paginatedDoctors = filteredDoctors.slice(startIndex, endIndex);
+    
+    // Build query string for pagination while preserving filters
+    const queryParams = new URLSearchParams();
+    if (name) queryParams.set('name', name);
+    if (specialty) queryParams.set('specialty', specialty);
+    if (city) queryParams.set('city', city);
+    if (zipCode) queryParams.set('zipCode', zipCode);
+    if (lang && lang !== 'de') queryParams.set('lang', lang);
+    
     res.render('index', {
         title: 'Doktorum nerede - Avusturya',
-        doctors: filteredDoctors,
+        doctors: paginatedDoctors,
+        totalDoctors,
+        currentPage: page,
+        totalPages,
+        doctorsPerPage,
         cities,
         zipCodes,
         formatNameForUrl,
         lang,
+        queryParams: queryParams.toString(),
         specialties: translations[lang]?.specialties || translations.de.specialties,
+        getTranslatedSpecialty: getTranslatedSpecialty,
         t: res.locals.t || (key => key)
     });
 });
@@ -546,6 +669,7 @@ app.get('/doctor/:nameSlug', (req, res) => {
             lang,
             t, // Eine Funktion, keine Objekt
             specialties: translations[lang]?.specialties || translations.de.specialties,
+            getTranslatedSpecialty: getTranslatedSpecialty,
             googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '' 
         });
     } catch (error) {
@@ -557,7 +681,10 @@ app.get('/doctor/:nameSlug', (req, res) => {
 
 // Login Routes
 app.get('/login', (req, res) => {
-    res.render('login', { error: null });
+    const error = req.query.error || (req.session.message && req.session.message.type === 'error' ? req.session.message.text : null);
+    const success = req.session.message && req.session.message.type === 'success' ? req.session.message.text : null;
+    delete req.session.message;
+    res.render('login', { error, success });
 });
 
 app.post('/login', async (req, res) => {
@@ -585,6 +712,158 @@ app.post('/login', async (req, res) => {
         }
     } else {
         res.render('login', { error: 'Ungültige E-Mail oder Passwort' });
+    }
+});
+
+// Password recovery route
+app.post('/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        const doctors = getDoctors();
+        const doctor = doctors.find(d => d.email.toLowerCase() === email.toLowerCase());
+        
+        // Always return success message for security (don't reveal if email exists)
+        if (doctor) {
+            // Generate a reset token (simple implementation - in production, use crypto.randomBytes)
+            const crypto = require('crypto');
+            const resetToken = crypto.randomBytes(32).toString('hex');
+            const resetTokenExpiry = Date.now() + 3600000; // 1 hour
+            
+            // Store reset token (in production, use a database or Redis)
+            // For now, we'll store it in the doctor object temporarily
+            doctor.resetToken = resetToken;
+            doctor.resetTokenExpiry = resetTokenExpiry;
+            saveDoctors(doctors);
+            
+            const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+            
+            // Send email with reset link
+            const emailSubject = 'Passwort zurücksetzen - Doktorum nerede';
+            const emailHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .button { display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 8px; margin: 20px 0; }
+                        .footer { margin-top: 30px; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h2>Passwort zurücksetzen</h2>
+                        <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.</p>
+                        <p>Klicken Sie auf den folgenden Link, um ein neues Passwort festzulegen:</p>
+                        <a href="${resetLink}" class="button">Passwort zurücksetzen</a>
+                        <p>Oder kopieren Sie diesen Link in Ihren Browser:</p>
+                        <p style="word-break: break-all; color: #666;">${resetLink}</p>
+                        <p style="color: #999; font-size: 14px;">Dieser Link ist 1 Stunde gültig.</p>
+                        <div class="footer">
+                            <p>Wenn Sie diese Anfrage nicht gestellt haben, können Sie diese E-Mail ignorieren.</p>
+                            <p>© ${new Date().getFullYear()} Doktorum nerede - Avusturya</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            const emailSent = await sendEmail(email, emailSubject, emailHtml);
+            
+            if (!emailSent) {
+                // Fallback: log to console if email not configured
+                console.log('Password reset link for', email, ':', resetLink);
+            }
+        }
+        
+        res.json({ 
+            success: true, 
+            message: 'Wenn ein Konto mit dieser E-Mail-Adresse existiert, haben wir Ihnen einen Link zum Zurücksetzen des Passworts gesendet.' 
+        });
+    } catch (error) {
+        console.error('Fehler bei der Passwort-Wiederherstellung:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.' 
+        });
+    }
+});
+
+// Reset password page
+app.get('/reset-password', (req, res) => {
+    const { token, email } = req.query;
+    if (!token || !email) {
+        return res.redirect('/login?error=Invalid reset link');
+    }
+    
+    res.render('reset-password', { token, email, error: null });
+});
+
+// Reset password submission
+app.post('/reset-password', async (req, res) => {
+    try {
+        const { token, email, password, confirmPassword } = req.body;
+        
+        if (password !== confirmPassword) {
+            return res.render('reset-password', { 
+                token, 
+                email, 
+                error: 'Die Passwörter stimmen nicht überein' 
+            });
+        }
+        
+        const doctors = getDoctors();
+        const doctorIndex = doctors.findIndex(d => d.email.toLowerCase() === email.toLowerCase());
+        
+        if (doctorIndex === -1) {
+            return res.render('reset-password', { 
+                token, 
+                email, 
+                error: 'Ungültiger Reset-Link' 
+            });
+        }
+        
+        const doctor = doctors[doctorIndex];
+        
+        // Verify token
+        if (!doctor.resetToken || doctor.resetToken !== token) {
+            return res.render('reset-password', { 
+                token, 
+                email, 
+                error: 'Ungültiger oder abgelaufener Reset-Link' 
+            });
+        }
+        
+        // Check if token expired
+        if (!doctor.resetTokenExpiry || doctor.resetTokenExpiry < Date.now()) {
+            return res.render('reset-password', { 
+                token, 
+                email, 
+                error: 'Der Reset-Link ist abgelaufen. Bitte fordern Sie einen neuen Link an.' 
+            });
+        }
+        
+        // Reset password
+        doctor.password = await bcrypt.hash(password, 10);
+        delete doctor.resetToken;
+        delete doctor.resetTokenExpiry;
+        doctors[doctorIndex] = doctor;
+        saveDoctors(doctors);
+        
+        req.session.message = {
+            type: 'success',
+            text: 'Ihr Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt anmelden.'
+        };
+        
+        res.redirect('/login');
+    } catch (error) {
+        console.error('Fehler beim Zurücksetzen des Passworts:', error);
+        res.render('reset-password', { 
+            token: req.body.token, 
+            email: req.body.email, 
+            error: 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.' 
+        });
     }
 });
 
@@ -1081,7 +1360,8 @@ app.get('/register', (req, res) => {
         // Deutsche Fachgebiete für die Registrierung verwenden (einfacherer, robusterer Ansatz)
         res.render('register', {
             error: null,
-            specialties: translations.de.specialties
+            specialties: translations.de.specialties,
+            googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || ''
         });
     } catch (error) {
         console.error('Fehler beim Rendern der Registrierungsseite:', error);
@@ -1667,6 +1947,76 @@ app.get('/datenschutz', (req, res) => {
     res.render('datenschutz', {
         title: 'Datenschutz - Doktorum nerede'
     });
+});
+
+// Test Email Route (for testing SMTP configuration)
+app.get('/test-email', async (req, res) => {
+    const testEmail = req.query.to || process.env.ADMIN_EMAIL;
+    
+    if (!testEmail) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Bitte geben Sie eine E-Mail-Adresse an: /test-email?to=ihre@email.com' 
+        });
+    }
+    
+    const testSubject = 'Test E-Mail - Doktorum nerede';
+    const testHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .success { background-color: #10b981; color: white; padding: 15px; border-radius: 8px; margin: 20px 0; }
+                .info { background-color: #3b82f6; color: white; padding: 15px; border-radius: 8px; margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="success">
+                    <h2>✅ Test E-Mail erfolgreich!</h2>
+                </div>
+                <div class="info">
+                    <p>Diese E-Mail wurde von Ihrem SMTP Server gesendet.</p>
+                    <p><strong>Server:</strong> ${process.env.SMTP_HOST || 'Nicht konfiguriert'}</p>
+                    <p><strong>Port:</strong> ${process.env.SMTP_PORT || 'Nicht konfiguriert'}</p>
+                    <p><strong>Zeit:</strong> ${new Date().toLocaleString('de-DE')}</p>
+                </div>
+                <p>Wenn Sie diese E-Mail erhalten haben, funktioniert Ihre SMTP-Konfiguration korrekt!</p>
+                <p style="margin-top: 30px; color: #666; font-size: 12px;">
+                    © ${new Date().getFullYear()} Doktorum nerede - Avusturya
+                </p>
+            </div>
+        </body>
+        </html>
+    `;
+    
+    try {
+        const emailSent = await sendEmail(testEmail, testSubject, testHtml);
+        
+        if (emailSent) {
+            res.json({ 
+                success: true, 
+                message: `Test E-Mail wurde erfolgreich an ${testEmail} gesendet!`,
+                to: testEmail
+            });
+        } else {
+            res.status(500).json({ 
+                success: false, 
+                message: 'E-Mail konnte nicht gesendet werden. Überprüfen Sie die SMTP-Konfiguration und Server-Logs.',
+                to: testEmail
+            });
+        }
+    } catch (error) {
+        console.error('Fehler beim Senden der Test-E-Mail:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Fehler beim Senden der E-Mail: ' + error.message,
+            to: testEmail
+        });
+    }
 });
 
 // Server starten

@@ -1,26 +1,27 @@
 <!DOCTYPE html>
-<html lang="de" class="h-full bg-gray-50">
+<html lang="de" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Doktorum nerede</title>
     <link href="/css/output.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-<body class="h-full">
+<body class="h-full bg-gray-50 font-sans antialiased">
     <div class="flex min-h-full flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div class="sm:mx-auto sm:w-full sm:max-w-md">
-            <a href="/" class="text-center text-2xl font-bold leading-9 tracking-tight text-indigo-600">
+            <a href="/" class="text-center text-2xl font-bold leading-9 tracking-tight text-blue-600 hover:text-blue-700 transition-all duration-200 ease-in-out">
                 Doktorum nerede
             </a>
-            <h2 class="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
+            <h2 class="mt-8 text-center text-2xl font-bold leading-9 tracking-tight text-gray-800">
                 Melden Sie sich in Ihrem Konto an
             </h2>
         </div>
 
         <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-            <div class="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12">
+            <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50 rounded-2xl px-8 py-10 sm:px-10 hover:shadow-lg transition-all duration-200 ease-in-out">
                 <% if (error) { %>
-                    <div class="mb-6 rounded-md bg-red-50 p-4">
+                    <div class="mb-6 rounded-xl bg-red-50 p-4 border border-red-200">
                         <div class="flex">
                             <div class="flex-shrink-0">
                                 <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -28,7 +29,7 @@
                                 </svg>
                             </div>
                             <div class="ml-3">
-                                <h3 class="text-sm font-medium text-red-800"><%= error %></h3>
+                                <h3 class="text-sm font-semibold text-red-800"><%= error %></h3>
                             </div>
                         </div>
                     </div>
@@ -36,41 +37,146 @@
 
                 <form class="space-y-6" action="/login" method="POST">
                     <div>
-                        <label for="email" class="block text-sm font-medium leading-6 text-gray-900">
+                        <label for="email" class="block text-sm font-semibold text-gray-800 mb-2">
                             E-Mail-Adresse
                         </label>
-                        <div class="mt-2">
+                        <div>
                             <input id="email" name="email" type="email" required 
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                         </div>
                     </div>
 
                     <div>
-                        <label for="password" class="block text-sm font-medium leading-6 text-gray-900">
+                        <label for="password" class="block text-sm font-semibold text-gray-800 mb-2">
                             Passwort
                         </label>
-                        <div class="mt-2">
+                        <div>
                             <input id="password" name="password" type="password" required 
-                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                class="block w-full border border-gray-300 rounded-lg p-3 text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out sm:text-sm">
                         </div>
                     </div>
 
                     <div>
                         <button type="submit" 
-                            class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                            class="flex w-full justify-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 ease-in-out">
                             Anmelden →
                         </button>
                     </div>
                 </form>
+
+                <div class="mt-4 text-center">
+                    <button type="button" onclick="showPasswordRecovery()" 
+                            class="text-sm font-medium text-blue-600 hover:text-blue-700 transition-all duration-200 ease-in-out">
+                        Passwort vergessen?
+                    </button>
+                </div>
             </div>
 
-            <p class="mt-10 text-center text-sm text-gray-500">
+            <p class="mt-8 text-center text-sm text-gray-700">
                 Noch kein Konto? 
-                <a href="/register" class="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">
+                <a href="/register" class="font-semibold leading-6 text-blue-600 hover:text-blue-700 transition-all duration-200 ease-in-out">
                     Registrieren Sie sich hier
                 </a>
             </p>
         </div>
     </div>
+
+    <!-- Password Recovery Modal -->
+    <div id="passwordRecoveryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="relative top-10 sm:top-20 mx-auto p-4 sm:p-6 border w-11/12 sm:w-96 shadow-lg rounded-2xl bg-white max-w-md">
+            <h3 class="text-base sm:text-lg font-bold leading-6 text-gray-900 mb-4">Passwort zurücksetzen</h3>
+            <form id="passwordRecoveryForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm sm:text-base font-bold text-gray-900 mb-2">E-Mail-Adresse</label>
+                    <input type="email" id="recoveryEmail" name="email" required 
+                           class="block w-full border border-gray-300 rounded-lg p-3 text-base font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out"
+                           placeholder="Ihre E-Mail-Adresse">
+                    <p class="mt-2 text-xs sm:text-sm text-gray-600">Wir senden Ihnen einen Link zum Zurücksetzen des Passworts.</p>
+                </div>
+                <div class="flex justify-end gap-2 sm:gap-3">
+                    <button type="button" onclick="closePasswordRecoveryModal()"
+                        class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 sm:px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 ease-in-out text-sm sm:text-base">
+                        Abbrechen
+                    </button>
+                    <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 sm:px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 ease-in-out text-sm sm:text-base">
+                        Senden
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showPasswordRecovery() {
+            document.getElementById('passwordRecoveryModal').classList.remove('hidden');
+        }
+
+        function closePasswordRecoveryModal() {
+            document.getElementById('passwordRecoveryModal').classList.add('hidden');
+            document.getElementById('passwordRecoveryForm').reset();
+        }
+
+        // Show error or success message if present
+        <% if (error) { %>
+            Swal.fire({
+                icon: 'error',
+                title: 'Fehler',
+                text: '<%= error %>',
+                confirmButtonColor: '#ef4444'
+            });
+        <% } %>
+        <% if (success) { %>
+            Swal.fire({
+                icon: 'success',
+                title: 'Erfolg',
+                text: '<%= success %>',
+                confirmButtonColor: '#10b981'
+            });
+        <% } %>
+
+        // Password recovery form submission
+        document.getElementById('passwordRecoveryForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('recoveryEmail').value;
+            
+            try {
+                const response = await fetch('/forgot-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'E-Mail gesendet',
+                        text: 'Wenn ein Konto mit dieser E-Mail-Adresse existiert, haben wir Ihnen einen Link zum Zurücksetzen des Passworts gesendet.',
+                        confirmButtonColor: '#10b981'
+                    });
+                    closePasswordRecoveryModal();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Fehler',
+                        text: result.message || 'Fehler beim Senden der E-Mail',
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Fehler',
+                    text: 'Ein unerwarteter Fehler ist aufgetreten',
+                    confirmButtonColor: '#ef4444'
+                });
+            }
+        });
+    </script>
 </body>
-</html> 
+</html>
